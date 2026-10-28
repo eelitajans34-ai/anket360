@@ -44,6 +44,11 @@ export interface DataStore {
   createInvitation(orgId: ID, invitedBy: ID, email: string, role: Invitation["role"]): Promise<Invitation>;
   listInvitations(orgId: ID): Promise<Invitation[]>;
   revokeInvitation(id: ID): Promise<void>;
+  /**
+   * Davet bağlantısını e-postayla gönderir. E-posta altyapısı yapılandırılmamışsa
+   * "kapali" döner (bağlantı elle iletilir).
+   */
+  sendInvitationEmail(id: ID): Promise<"gonderildi" | "kapali">;
   /** Davet kodunu oturumdaki kullanıcı adına kabul eder, kurum kimliğini döner. */
   acceptInvitation(token: string, userId: ID): Promise<ID>;
 

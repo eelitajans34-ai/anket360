@@ -267,6 +267,11 @@ export class LocalStore implements DataStore {
     });
   }
 
+  async sendInvitationEmail(): Promise<"kapali"> {
+    // Demo modunda e-posta gönderilmez
+    return "kapali";
+  }
+
   async acceptInvitation(token: string, userId: ID): Promise<ID> {
     return this.mutate((db) => {
       const inv = db.invitations.find((i) => i.token === token && !i.acceptedAt);

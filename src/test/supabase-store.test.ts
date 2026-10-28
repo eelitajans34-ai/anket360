@@ -32,9 +32,12 @@ function builder(entry: (typeof calls)[number]) {
   return b;
 }
 
+const functions = { invoke: vi.fn() };
+
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     auth,
+    functions,
     from: (table: string) => { const e = { table, ops: [] }; calls.push(e); return builder(e); },
     rpc: (name: string, args: unknown) => { const e = { rpc: name, ops: [["args", [args]]] as Array<[string, unknown[]]> }; calls.push(e); return builder(e); },
   }),
@@ -148,5 +151,24 @@ describe("SupabaseStore (sahte istemci)", () => {
     const rs = await store.listResponses("s1");
     expect(rs).toHaveLength(2002);
     expect(calls.map((c) => c.ops.find(([m]) => m === "range")![1])).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
+  });
+
+  it("davet e-postası: gönderildi, kapalı, yüklenmemiş fonksiyon ve sık gönderim", async () => {
+    const httpErr = (status: number, body?: unknown) => ({ error: { context: new Response(body ? JSON.stringify(body) : "Not Found", { status }) } });
+    functions.invoke.mockResolvedValueOnce({ data: { sent: true }, error: null });
+    await expect(store.sendInvitationEmail("i1")).resolves.toBe("gonderildi");
+    expect(functions.invoke).toHaveBeenCalledWith("davet-e-postasi", { body: { invitationId: "i1" } });
+
+    functions.invoke.mockResolvedValueOnce(httpErr(503, { code: "eposta_kapali", message: "x" }));
+    await expect(store.sendInvitationEmail("i1")).resolves.toBe("kapali");
+
+    functions.invoke.mockResolvedValueOnce(httpErr(404));
+    await expect(store.sendInvitationEmail("i1")).resolves.toBe("kapali");
+
+    functions.invoke.mockResolvedValueOnce(httpErr(404, { code: "bulunamadi", message: "Davet bulunamadı." }));
+    await expect(store.sendInvitationEmail("i1")).rejects.toThrow("Davet bulunamadı.");
+
+    functions.invoke.mockResolvedValueOnce(httpErr(429, { code: "cok_sik", message: "Bu davet az önce gönderildi. Bir dakika sonra tekrar deneyin." }));
+    await expect(store.sendInvitationEmail("i1")).rejects.toMatchObject({ code: "validation", message: expect.stringContaining("az önce") });
   });
 });

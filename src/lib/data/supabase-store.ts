@@ -199,6 +199,20 @@ export class SupabaseStore implements DataStore {
     if (error) throw toDataError(error, "Davet iptal edilemedi.");
   }
 
+  async sendInvitationEmail(id: ID): Promise<"gonderildi" | "kapali"> {
+    const { error } = await this.sb.functions.invoke("davet-e-postasi", { body: { invitationId: id } });
+    if (!error) return "gonderildi";
+    // FunctionsHttpError: fonksiyonun döndüğü yanıt context'te
+    const res = (error as { context?: Response }).context;
+    if (res && typeof res.status === "number") {
+      const body = await safeJson(res);
+      // 503: sağlayıcı tanımlı değil · kodsuz 404: fonksiyon henüz yüklenmemiş
+      if (res.status === 503 || body?.code === "eposta_kapali" || (res.status === 404 && !body?.code)) return "kapali";
+      throw new DataError(res.status === 429 ? "validation" : "unknown", body?.message ?? "Davet e-postası gönderilemedi.");
+    }
+    throw toDataError(error, "Davet e-postası gönderilemedi.");
+  }
+
   async acceptInvitation(token: string): Promise<ID> {
     const { data, error } = await this.sb.rpc("accept_invitation", { p_token: token });
     if (error) throw toDataError(error, "Davet kabul edilemedi.");
@@ -318,5 +332,13 @@ export class SupabaseStore implements DataStore {
       if (data.length < page) break;
     }
     return rows.map(toResponse);
+  }
+}
+
+async function safeJson(res: Response): Promise<{ code?: string; message?: string } | null> {
+  try {
+    return await res.clone().json();
+  } catch {
+    return null;
   }
 }

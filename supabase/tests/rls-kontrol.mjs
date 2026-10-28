@@ -156,5 +156,16 @@ ok("gizli soruların yanıtları kaydedilmez", JSON.stringify(kayit) === JSON.st
 const bos = (await gonder(kosullu.id, { a: 3, b: "Pahalı", c: "" })).rows[0].r;
 ok("boş yanıtlar kaydedilmez", JSON.stringify((await db.query(`select answers from responses where id=$1`, [bos])).rows[0].answers) === JSON.stringify({ a: 3, b: "Pahalı" }));
 
+// ---------------- Davet e-postası gönderim sınırı ----------------
+const inv2 = (await as(A, `insert into invitations (org_id,email,role,invited_by) values ($1,'yeni@kurum.com','uye','${A}') returning *`, [org.id])).rows[0];
+ok("yönetici davet e-postasını gönderebilir", (await as(A, `select mark_invitation_emailed($1) as v`, [inv2.id])).rows[0].v === true);
+ok("60 saniye içinde tekrar gönderilemez", (await as(A, `select mark_invitation_emailed($1) as v`, [inv2.id])).rows[0].v === false);
+await db.query(`update invitations set emailed_at = now() - interval '2 minutes' where id=$1`, [inv2.id]);
+ok("60 saniye sonra tekrar gönderilebilir", (await as(A, `select mark_invitation_emailed($1) as v`, [inv2.id])).rows[0].v === true);
+await expectFail("yönetici olmayan davet e-postası tetikleyemez", as(C, `select mark_invitation_emailed($1)`, [inv2.id]));
+await expectFail("ziyaretçi davet e-postası tetikleyemez", asAnon(`select mark_invitation_emailed($1)`, [inv2.id]));
+await expectFail("kabul edilmiş davet için e-posta gönderilemez", as(A, `select mark_invitation_emailed($1)`, [inv.id]));
+ok("yabancı emailed_at alanını göremez", (await as(C, `select emailed_at from invitations`)).rows.length === 0);
+
 console.log("pgcrypto token örneği:", (await db.query("select token from invitations limit 1")).rows[0]?.token);
 await client.end();

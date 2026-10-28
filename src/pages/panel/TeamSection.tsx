@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Check, Copy, Trash2, UserMinus, UserPlus } from "lucide-react";
+import { Check, Copy, Mail, Trash2, UserMinus, UserPlus } from "lucide-react";
 import { Alert } from "@/components/ui/Field";
 import { useAuth } from "@/lib/auth";
 import { ROLE_LABEL } from "@/lib/constants";
@@ -36,7 +36,19 @@ export function TeamSection() {
       setEmail("");
       await invites.reload();
       await copy(inv.token);
-      setMsg({ kind: "success", text: `Davet oluşturuldu ve bağlantı panoya kopyalandı. Bağlantıyı ${inv.email} adresine iletin.` });
+      let sent: "gonderildi" | "kapali" | "hata" = "kapali";
+      try {
+        sent = await db.sendInvitationEmail(inv.id);
+      } catch {
+        sent = "hata";
+      }
+      setMsg(
+        sent === "gonderildi"
+          ? { kind: "success", text: `Davet e-postası ${inv.email} adresine gönderildi. Bağlantı ayrıca panoya kopyalandı.` }
+          : sent === "hata"
+            ? { kind: "error", text: `Davet oluşturuldu ama e-posta gönderilemedi. Panoya kopyalanan bağlantıyı ${inv.email} adresine iletin.` }
+            : { kind: "success", text: `Davet oluşturuldu ve bağlantı panoya kopyalandı. Bağlantıyı ${inv.email} adresine iletin.` },
+      );
     } catch (err) {
       setMsg({ kind: "error", text: err instanceof Error ? err.message : "Davet oluşturulamadı." });
     } finally {
@@ -123,6 +135,23 @@ export function TeamSection() {
                 </div>
                 <button className="btn-ghost px-2 py-1 text-xs" onClick={() => copy(inv.token)} aria-label={`${inv.email} davet bağlantısını kopyala`}>
                   {copied === inv.token ? <><Check className="h-4 w-4 text-emerald-600" />Kopyalandı</> : <><Copy className="h-4 w-4" />Bağlantı</>}
+                </button>
+                <button
+                  className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  aria-label={`${inv.email} davet e-postasını tekrar gönder`}
+                  title="E-postayı tekrar gönder"
+                  onClick={() =>
+                    run(async () => {
+                      const r = await db.sendInvitationEmail(inv.id);
+                      setMsg(
+                        r === "gonderildi"
+                          ? { kind: "success", text: `Davet e-postası ${inv.email} adresine tekrar gönderildi.` }
+                          : { kind: "error", text: "E-posta gönderimi yapılandırılmamış. Bağlantıyı kopyalayıp iletin." },
+                      );
+                    })
+                  }
+                >
+                  <Mail className="h-4 w-4" />
                 </button>
                 <button
                   className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"

@@ -11,6 +11,9 @@
 #   SUPABASE_ACCESS_TOKEN  — https://supabase.com/dashboard/account/tokens
 #   SUPABASE_PROJECT_REF   — proje adresindeki kod: https://<REF>.supabase.co
 #   SUPABASE_DB_PASSWORD   — proje oluşturulurken belirlenen veritabanı şifresi
+# İsteğe bağlı (e-posta için, ikisi birlikte):
+#   RESEND_API_KEY         — https://resend.com/api-keys (alan adı doğrulanmış olmalı)
+#   MAIL_FROM              — gönderen, ör. "Anket360 <bildirim@alanadiniz.com>"
 # İsteğe bağlı repository variable: SITE_URL (özel alan adı kullanılırsa)
 
 name: Test ve Yayın
@@ -69,6 +72,8 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
       PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      MAIL_FROM: ${{ secrets.MAIL_FROM }}
     steps:
       - name: Secret'ları denetle
         id: ayar
@@ -138,6 +143,35 @@ jobs:
             exit 1
           fi
           cat /tmp/push.log
+
+      - name: Edge Function'ları yükle
+        if: steps.ayar.outputs.hazir == 'true'
+        run: |
+          if [ -n "$RESEND_API_KEY" ] && [ -n "$MAIL_FROM" ]; then
+            supabase secrets set --project-ref "$PROJECT_REF" \
+              "RESEND_API_KEY=$RESEND_API_KEY" "MAIL_FROM=$MAIL_FROM" "SITE_URL=$SITE_URL" > /dev/null
+            echo "E-posta gizli değerleri tanımlandı."
+          else
+            echo "::notice title=E-posta kapalı::RESEND_API_KEY ve MAIL_FROM tanımlı değil; davet bağlantısı elle iletilir, Supabase varsayılan e-postaları kullanılır."
+          fi
+          supabase functions deploy davet-e-postasi --project-ref "$PROJECT_REF" --use-api
+
+      - name: E-posta sunucusu (SMTP)
+        if: steps.ayar.outputs.hazir == 'true' && env.RESEND_API_KEY != '' && env.MAIL_FROM != ''
+        run: |
+          # "Ad <adres>" biçiminden adı ve adresi ayır
+          addr=$(echo "$MAIL_FROM" | sed -E 's/.*<([^>]+)>.*/\1/')
+          name=$(echo "$MAIL_FROM" | sed -nE 's/^ *"?([^"<]+[^ "<])"? *<.*/\1/p'); name=${name:-Anket360}
+          body=$(jq -n --arg pass "$RESEND_API_KEY" --arg addr "$addr" --arg name "$name" '{
+            smtp_host: "smtp.resend.com", smtp_port: "465", smtp_user: "resend", smtp_pass: $pass,
+            smtp_admin_email: $addr, smtp_sender_name: $name
+          }')
+          code=$(curl -sS -o /tmp/smtp.json -w '%{http_code}' -X PATCH "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$body")
+          if [ "$code" -ge 300 ]; then
+            echo "::error title=SMTP ayarlanamadı (HTTP $code)::$(head -c 400 /tmp/smtp.json | tr '\n' ' ')"; exit 1
+          fi
+          echo "SMTP: smtp.resend.com, gönderen: $name <$addr>"
 
       - name: Kimlik doğrulama ayarları (adresler, Türkçe e-postalar)
         if: steps.ayar.outputs.hazir == 'true'
