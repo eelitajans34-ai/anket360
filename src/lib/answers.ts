@@ -1,3 +1,4 @@
+import { visibleQuestionIds } from "./conditions";
 import type { AnswerValue, Answers, Question } from "./types";
 
 export function isAnswered(v: AnswerValue | null | undefined): boolean {
@@ -6,14 +7,15 @@ export function isAnswered(v: AnswerValue | null | undefined): boolean {
   return true;
 }
 
-/** Yanıtlanmamış zorunlu soruların kimliklerini döner. */
+/** Yanıtlanmamış zorunlu soruların kimliklerini döner (koşulu sağlanmadığı için gizli sorular hariç). */
 export function missingRequired(questions: Question[], answers: Answers): string[] {
-  return questions.filter((q) => q.required && !isAnswered(answers[q.id])).map((q) => q.id);
+  const visible = visibleQuestionIds(questions, answers);
+  return questions.filter((q) => q.required && visible.has(q.id) && !isAnswered(answers[q.id])).map((q) => q.id);
 }
 
-/** Boş yanıtları atar; yalnızca ankette bulunan soruların yanıtlarını bırakır. */
+/** Boş yanıtları ve gizli soruların yanıtlarını atar; yalnızca görünen soruların yanıtları kalır. */
 export function cleanAnswers(questions: Question[], answers: Answers): Answers {
-  const ids = new Set(questions.map((q) => q.id));
+  const ids = visibleQuestionIds(questions, answers);
   return Object.fromEntries(Object.entries(answers).filter(([k, v]) => ids.has(k) && isAnswered(v)));
 }
 

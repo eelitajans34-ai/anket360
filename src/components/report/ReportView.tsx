@@ -7,6 +7,7 @@ import { RANGE_LABEL, dailyCounts, filterByRange, fmt, questionReport, type Ques
 import type { Question } from "@/lib/types";
 import { useAsync } from "@/lib/use-async";
 import { cn } from "@/lib/utils";
+import { visibleQuestionIds } from "@/lib/conditions";
 
 const RANGES: RangeKey[] = ["tumu", "7", "30", "90"];
 const dayLabel = (k: string) => new Date(`${k}T00:00:00`).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
@@ -20,6 +21,13 @@ export function ReportView({ surveyId, title, questions }: { surveyId: string; t
   const responses = useMemo(() => filterByRange(all, range), [all, range]);
   const daily = useMemo(() => dailyCounts(responses, range), [responses, range]);
   const reports = useMemo(() => questions.map((q) => questionReport(q, responses)), [questions, responses]);
+  // Koşullu sorular: her yanıtta hangi soruların gösterildiği
+  const shownCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (!questions.some((q) => q.showIf)) return counts;
+    for (const r of responses) for (const id of visibleQuestionIds(questions, r.answers)) counts.set(id, (counts.get(id) ?? 0) + 1);
+    return counts;
+  }, [questions, responses]);
   const last = responses.reduce<string | null>((m, r) => (!m || r.createdAt > m ? r.createdAt : m), null);
   const nps = reports.find((r): r is Extract<QuestionReport, { kind: "nps" }> => r.kind === "nps" && r.score !== null);
 
@@ -82,27 +90,30 @@ export function ReportView({ surveyId, title, questions }: { surveyId: string; t
             />
           </section>
 
-          {reports.map((r, i) => <QuestionCard key={r.question.id} index={i} report={r} total={responses.length} />)}
+          {reports.map((r, i) => (
+            <QuestionCard key={r.question.id} index={i} report={r} shown={r.question.showIf ? (shownCounts.get(r.question.id) ?? 0) : responses.length} />
+          ))}
         </>
       )}
     </div>
   );
 }
 
-function QuestionCard({ report: r, index, total }: { report: QuestionReport; index: number; total: number }) {
+function QuestionCard({ report: r, index, shown }: { report: QuestionReport; index: number; shown: number }) {
   const [showAll, setShowAll] = useState(false);
-  const skipped = total - r.answered;
+  const skipped = Math.max(0, shown - r.answered);
   return (
     <section className="card p-5" aria-labelledby={`rapor-${r.question.id}`}>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h3 id={`rapor-${r.question.id}`} className="font-semibold">{index + 1}. {r.question.title}</h3>
         <p className="text-xs text-slate-500">
+          {r.question.showIf && `Koşullu · ${shown} kişiye gösterildi · `}
           {r.answered} yanıt{skipped > 0 && ` · ${skipped} boş`}{r.kind === "secenek" && r.multi && " · birden fazla seçilebilir"}
         </p>
       </div>
 
       {r.answered === 0 ? (
-        <p className="text-sm text-slate-500">Bu soru bu aralıkta yanıtlanmadı.</p>
+        <p className="text-sm text-slate-500">{r.question.showIf && shown === 0 ? "Koşulu sağlanmadığı için bu aralıkta kimseye gösterilmedi." : "Bu soru bu aralıkta yanıtlanmadı."}</p>
       ) : r.kind === "secenek" ? (
         <HBarList items={r.options} />
       ) : r.kind === "puan" ? (

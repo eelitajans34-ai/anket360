@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { Alert } from "@/components/ui/Field";
-import { isAnswered, missingRequired } from "@/lib/answers";
+import { cleanAnswers, isAnswered, missingRequired } from "@/lib/answers";
+import { visibleQuestionIds } from "@/lib/conditions";
 import type { Answers, AnswerValue, Question, SurveyInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -28,7 +29,9 @@ export function SurveyForm({ survey, orgName, onSubmit }: SurveyFormProps) {
     setMissing((m) => m.filter((x) => x !== id));
   };
 
-  const answered = survey.questions.filter((q) => isAnswered(answers[q.id])).length;
+  const visibleIds = visibleQuestionIds(survey.questions, answers);
+  const shown = survey.questions.filter((q) => visibleIds.has(q.id));
+  const answered = shown.filter((q) => isAnswered(answers[q.id])).length;
 
   async function submit() {
     setError(null);
@@ -41,7 +44,7 @@ export function SurveyForm({ survey, orgName, onSubmit }: SurveyFormProps) {
     if (!onSubmit) return setSubmitted(true);
     setBusy(true);
     try {
-      await onSubmit(answers);
+      await onSubmit(cleanAnswers(survey.questions, answers));
       setSubmitted(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Yanıtınız gönderilemedi.");
@@ -75,14 +78,14 @@ export function SurveyForm({ survey, orgName, onSubmit }: SurveyFormProps) {
           {survey.questions.some((q) => q.required) && <p className="mt-3 text-xs text-slate-500"><span className="text-red-500">*</span> işaretli sorular zorunludur.</p>}
         </div>
       </div>
-      {survey.settings.showProgress && survey.questions.length > 0 && (
+      {survey.settings.showProgress && shown.length > 0 && (
         <div className="card sticky top-2 z-10 px-5 py-3">
-          <div className="flex justify-between text-xs text-slate-500"><span>İlerleme</span><span>{answered}/{survey.questions.length}</span></div>
-          <div className="mt-1.5 h-1.5 rounded-full bg-slate-100"><div className="h-1.5 rounded-full bg-brand-600 transition-all" style={{ width: `${(answered / survey.questions.length) * 100}%` }} /></div>
+          <div className="flex justify-between text-xs text-slate-500"><span>İlerleme</span><span>{answered}/{shown.length}</span></div>
+          <div className="mt-1.5 h-1.5 rounded-full bg-slate-100"><div className="h-1.5 rounded-full bg-brand-600 transition-all" style={{ width: `${(answered / shown.length) * 100}%` }} /></div>
         </div>
       )}
       {survey.questions.length === 0 && <p className="card p-8 text-center text-sm text-slate-500">Önizlemek için soru ekleyin.</p>}
-      {survey.questions.map((q, i) => (
+      {shown.map((q, i) => (
         <fieldset id={`soru-${q.id}`} key={q.id} className={cn("card scroll-mt-24 p-6", missing.includes(q.id) && "border-red-300 ring-1 ring-red-300")}>
           <legend className="sr-only">{q.title}</legend>
           <p className="font-medium">

@@ -1,0 +1,421 @@
+{
+ "kosullar": [
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlandi"
+   },
+   "answer": "x",
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlandi"
+   },
+   "answer": "",
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlandi"
+   },
+   "answer": [],
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlandi"
+   },
+   "answer": 0,
+   "expected": true,
+   "note": "0 geçerli yanıt"
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlandi"
+   },
+   "answer": null,
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlanmadi"
+   },
+   "answer": null,
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlanmadi"
+   },
+   "answer": "",
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "yanitlanmadi"
+   },
+   "answer": [
+    "A"
+   ],
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esittir",
+    "value": "Evet"
+   },
+   "answer": "Evet",
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esittir",
+    "value": "Evet"
+   },
+   "answer": "Hayır",
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esittir",
+    "value": "Evet"
+   },
+   "answer": null,
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esittir",
+    "value": 5
+   },
+   "answer": 5,
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esittir",
+    "value": 5
+   },
+   "answer": 4,
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esittir",
+    "value": "A"
+   },
+   "answer": [
+    "A"
+   ],
+   "expected": false,
+   "note": "dizi eşitlikle karşılaştırılmaz"
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esit_degil",
+    "value": "Evet"
+   },
+   "answer": "Hayır",
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esit_degil",
+    "value": "Evet"
+   },
+   "answer": "Evet",
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "esit_degil",
+    "value": "Evet"
+   },
+   "answer": null,
+   "expected": false,
+   "note": "yanıtsız → sağlanmaz"
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "icerir",
+    "value": "Satış"
+   },
+   "answer": [
+    "Satış",
+    "Destek"
+   ],
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "icerir",
+    "value": "Satış"
+   },
+   "answer": [
+    "Destek"
+   ],
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "icerir",
+    "value": "Satış"
+   },
+   "answer": null,
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "icerir",
+    "value": "Satış"
+   },
+   "answer": "Satış",
+   "expected": false,
+   "note": "dizi değil"
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "icermez",
+    "value": "Satış"
+   },
+   "answer": [
+    "Destek"
+   ],
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "icermez",
+    "value": "Satış"
+   },
+   "answer": [
+    "Satış"
+   ],
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "icermez",
+    "value": "Satış"
+   },
+   "answer": [],
+   "expected": false,
+   "note": "boş → sağlanmaz"
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "buyuk_esit",
+    "value": 9
+   },
+   "answer": 9,
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "buyuk_esit",
+    "value": 9
+   },
+   "answer": 10,
+   "expected": true,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "buyuk_esit",
+    "value": 9
+   },
+   "answer": 8,
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "buyuk_esit",
+    "value": 9
+   },
+   "answer": null,
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "buyuk_esit",
+    "value": 3
+   },
+   "answer": "4",
+   "expected": true,
+   "note": "metin sayı"
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "kucuk_esit",
+    "value": 6
+   },
+   "answer": 0,
+   "expected": true,
+   "note": "0 geçerli"
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "kucuk_esit",
+    "value": 6
+   },
+   "answer": 7,
+   "expected": false,
+   "note": ""
+  },
+  {
+   "cond": {
+    "questionId": "k",
+    "operator": "kucuk_esit",
+    "value": 6
+   },
+   "answer": "abc",
+   "expected": false,
+   "note": ""
+  }
+ ],
+ "anket": [
+  {
+   "id": "a",
+   "type": "nps",
+   "title": "NPS",
+   "required": true
+  },
+  {
+   "id": "b",
+   "type": "uzun_metin",
+   "title": "Neden düşük?",
+   "required": true,
+   "showIf": {
+    "questionId": "a",
+    "operator": "kucuk_esit",
+    "value": 6
+   }
+  },
+  {
+   "id": "c",
+   "type": "tek_secim",
+   "title": "Tekrar?",
+   "required": false,
+   "options": [
+    "Evet",
+    "Hayır"
+   ],
+   "showIf": {
+    "questionId": "b",
+    "operator": "yanitlandi"
+   }
+  },
+  {
+   "id": "d",
+   "type": "kisa_metin",
+   "title": "Teşekkür",
+   "required": false,
+   "showIf": {
+    "questionId": "a",
+    "operator": "buyuk_esit",
+    "value": 9
+   }
+  }
+ ],
+ "gorunurluk": [
+  {
+   "answers": {},
+   "visible": [
+    "a"
+   ]
+  },
+  {
+   "answers": {
+    "a": 3
+   },
+   "visible": [
+    "a",
+    "b"
+   ]
+  },
+  {
+   "answers": {
+    "a": 3,
+    "b": "pahalı"
+   },
+   "visible": [
+    "a",
+    "b",
+    "c"
+   ]
+  },
+  {
+   "answers": {
+    "a": 10,
+    "b": "eski yanıt",
+    "c": "Evet"
+   },
+   "visible": [
+    "a",
+    "d"
+   ],
+   "note": "b gizli → ona bağlı c de gizli"
+  },
+  {
+   "answers": {
+    "a": 7
+   },
+   "visible": [
+    "a"
+   ]
+  }
+ ]
+}

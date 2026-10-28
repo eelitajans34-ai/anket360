@@ -40,6 +40,23 @@ export type QuestionType =
   | "evet_hayir"
   | "tarih";
 
+export type ConditionOperator =
+  | "esittir"
+  | "esit_degil"
+  | "icerir"
+  | "icermez"
+  | "buyuk_esit"
+  | "kucuk_esit"
+  | "yanitlandi"
+  | "yanitlanmadi";
+
+/** Soru yalnızca önceki bir sorunun yanıtı bu koşulu sağlıyorsa gösterilir. */
+export interface QuestionCondition {
+  questionId: ID;
+  operator: ConditionOperator;
+  value?: string | number;
+}
+
 export interface Question {
   id: ID;
   type: QuestionType;
@@ -49,6 +66,7 @@ export interface Question {
   options?: string[];
   /** derecelendirme için en yüksek puan (3–10) */
   scaleMax?: number;
+  showIf?: QuestionCondition;
 }
 
 export type SurveyStatus = "taslak" | "yayinda" | "kapali";

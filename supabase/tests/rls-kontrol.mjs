@@ -130,5 +130,31 @@ ok("anket silinince yanıtları da silinir",
   (await as(A, `delete from surveys where id=$1 returning id`, [pub.id])).rows.length === 1 &&
   (await db.query(`select count(*)::int n from responses where survey_id=$1`, [pub.id])).rows[0].n === 0);
 
+// ---------------- Koşullu sorular (TS ile ortak örnekler) ----------------
+const ornek = JSON.parse(fs.readFileSync(new URL("./kosul-ornekleri.json", import.meta.url), "utf8"));
+let uyumsuz = 0;
+for (const o of ornek.kosullar) {
+  const r = (await db.query(`select coalesce(kosul_saglandi($1::jsonb, $2::jsonb), false) as v`, [JSON.stringify(o.cond), o.answer === null ? null : JSON.stringify(o.answer)])).rows[0].v;
+  if (r !== o.expected) { uyumsuz++; console.log("  uyumsuz:", JSON.stringify(o), "SQL:", r); }
+}
+ok(`koşul değerlendirmesi TS ile aynı (${ornek.kosullar.length} örnek)`, uyumsuz === 0);
+let gUyumsuz = 0;
+for (const o of ornek.gorunurluk) {
+  const r = (await db.query(`select gorunur_sorular($1::jsonb, $2::jsonb) as v`, [JSON.stringify(ornek.anket), JSON.stringify(o.answers)])).rows[0].v;
+  if (JSON.stringify(r) !== JSON.stringify(o.visible)) { gUyumsuz++; console.log("  uyumsuz görünürlük:", JSON.stringify(o.answers), "SQL:", r); }
+}
+ok(`görünür soru hesabı TS ile aynı (${ornek.gorunurluk.length} örnek)`, gUyumsuz === 0);
+await expectFail("ziyaretçi yardımcı koşul fonksiyonunu doğrudan çağıramaz", asAnon(`select gorunur_sorular('[]', '{}')`));
+
+const kosullu = (await as(A, `insert into surveys (org_id,title,created_by,questions,settings,status) values ($1,'Koşullu','${A}',$2,$3,'yayinda') returning *`,
+  [org.id, JSON.stringify(ornek.anket), ayar({ singleResponse: false })])).rows[0];
+ok("yüksek puanda gizli zorunlu soru aranmaz", !!(await gonder(kosullu.id, { a: 10 })).rows[0].r);
+await expectFail("düşük puanda görünen zorunlu soru boş bırakılamaz", gonder(kosullu.id, { a: 2 }));
+const kid = (await gonder(kosullu.id, { a: 10, b: "gizli soruya sızdırılan yanıt", c: "Evet", d: "Teşekkürler" })).rows[0].r;
+const kayit = (await db.query(`select answers from responses where id=$1`, [kid])).rows[0].answers;
+ok("gizli soruların yanıtları kaydedilmez", JSON.stringify(kayit) === JSON.stringify({ a: 10, d: "Teşekkürler" }));
+const bos = (await gonder(kosullu.id, { a: 3, b: "Pahalı", c: "" })).rows[0].r;
+ok("boş yanıtlar kaydedilmez", JSON.stringify((await db.query(`select answers from responses where id=$1`, [bos])).rows[0].answers) === JSON.stringify({ a: 3, b: "Pahalı" }));
+
 console.log("pgcrypto token örneği:", (await db.query("select token from invitations limit 1")).rows[0]?.token);
 await client.end();

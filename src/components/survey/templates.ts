@@ -11,7 +11,7 @@ export function newQuestion(type: QuestionType): Question {
 
 /** Soru tipi değiştiğinde uyumsuz alanları temizler, gerekli alanları ekler. */
 export function changeQuestionType(q: Question, type: QuestionType): Question {
-  const next: Question = { id: q.id, type, title: q.title, description: q.description, required: q.required };
+  const next: Question = { id: q.id, type, title: q.title, description: q.description, required: q.required, showIf: q.showIf };
   if (questionTypeMeta(type).hasOptions) next.options = q.options?.length ? q.options : ["Seçenek 1", "Seçenek 2"];
   if (type === "derecelendirme") next.scaleMax = q.scaleMax ?? 5;
   return next;

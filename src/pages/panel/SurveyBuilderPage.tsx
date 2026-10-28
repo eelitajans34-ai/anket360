@@ -7,6 +7,7 @@ import { ShareDialog } from "@/components/survey/ShareDialog";
 import { ResponsesTable } from "@/components/survey/ResponsesTable";
 import { ReportView } from "@/components/report/ReportView";
 import { DEFAULT_SETTINGS, TEMPLATES, newQuestion } from "@/components/survey/templates";
+import { conditionError } from "@/lib/conditions";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert, Toggle } from "@/components/ui/Field";
 import { FullPageSpinner } from "@/components/RouteGuards";
@@ -173,10 +174,15 @@ export default function SurveyBuilderPage() {
                 question={q}
                 index={i}
                 total={draft.questions.length}
+                previous={draft.questions.slice(0, i)}
+                conditionError={conditionError(draft.questions, i)}
                 onChange={(nq) => setQuestions((qs) => qs.map((x) => (x.id === q.id ? nq : x)))}
                 onMove={(dir) => setQuestions((qs) => { const a = [...qs]; [a[i], a[i + dir]] = [a[i + dir]!, a[i]!]; return a; })}
                 onDuplicate={() => setQuestions((qs) => [...qs.slice(0, i + 1), { ...structuredClone(q), id: uid() }, ...qs.slice(i + 1)])}
-                onDelete={() => setQuestions((qs) => qs.filter((x) => x.id !== q.id))}
+                onDelete={() =>
+                  // Silinen soruya bağlı koşullar da kaldırılır
+                  setQuestions((qs) => qs.filter((x) => x.id !== q.id).map((x) => (x.showIf?.questionId === q.id ? { ...x, showIf: undefined } : x)))
+                }
               />
             ))}
 

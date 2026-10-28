@@ -14,6 +14,7 @@ import type {
 } from "@/lib/types";
 import { isValidEmail, passwordIssues, slugify, uid } from "@/lib/utils";
 import { cleanAnswers, isPastEndDate, missingRequired } from "@/lib/answers";
+import { conditionError } from "@/lib/conditions";
 import { DataError, type DataStore } from "./store";
 
 /**
@@ -413,6 +414,10 @@ export function validateSurvey(input: Pick<SurveyInput, "title" | "questions" | 
         throw new DataError("validation", `${n}. sorudaki seçenekler birbirinden farklı olmalı.`);
       }
     }
+  });
+  input.questions.forEach((_, i) => {
+    const err = conditionError(input.questions, i);
+    if (err) throw new DataError("validation", err);
   });
   if (input.status === "yayinda" && input.questions.length === 0) {
     throw new DataError("validation", "Yayınlamak için en az bir soru ekleyin.");
