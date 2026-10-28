@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ClipboardList, Copy, MoreVertical, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ClipboardList, Copy, MoreVertical, Pencil, Plus, Search, Share2, Trash2 } from "lucide-react";
+import { ShareDialog } from "@/components/survey/ShareDialog";
 import { PageHeader } from "./PanelLayout";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Field";
@@ -21,6 +22,7 @@ export default function SurveysPage() {
   const [filter, setFilter] = useState<Filter>("hepsi");
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Survey | null>(null);
+  const [sharing, setSharing] = useState<Survey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const canDelete = activeOrg?.role === "sahip" || activeOrg?.role === "yonetici";
 
@@ -97,6 +99,7 @@ export default function SurveysPage() {
                   {menuFor === s.id && (
                     <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-lg border border-slate-200 bg-white p-1 shadow-lg" role="menu">
                       <Link role="menuitem" to={`/panel/anketler/${s.id}/duzenle`} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-slate-50"><Pencil className="h-4 w-4" />Düzenle</Link>
+                      {s.status === "yayinda" && <button role="menuitem" onClick={() => { setMenuFor(null); setSharing(s); }} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-slate-50"><Share2 className="h-4 w-4" />Paylaş</button>}
                       <button role="menuitem" onClick={() => duplicate(s)} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-slate-50"><Copy className="h-4 w-4" />Kopyala</button>
                       {canDelete && <button role="menuitem" onClick={() => { setMenuFor(null); setToDelete(s); }} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" />Sil</button>}
                     </div>
@@ -107,6 +110,8 @@ export default function SurveysPage() {
           </ul>
         )}
       </div>
+
+      {sharing && <ShareDialog surveyId={sharing.id} title={sharing.title} onClose={() => setSharing(null)} />}
 
       {toDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="alertdialog" aria-modal="true" aria-labelledby="sil-baslik">

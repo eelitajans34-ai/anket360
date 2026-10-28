@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { ID, Invitation, OrganizationInput, SignUpInput, Survey, SurveyInput, User } from "@/lib/types";
+import type { Answers, ID, Invitation, OrganizationInput, PublicSurvey, SignUpInput, Survey, SurveyInput, User } from "@/lib/types";
+import { cleanAnswers } from "@/lib/answers";
 import { appUrl, isValidEmail, passwordIssues, slugify } from "@/lib/utils";
 import { validateOrg, validateSurvey } from "./local-store";
 import { DataError, type DataStore } from "./store";
@@ -279,8 +280,28 @@ export class SupabaseStore implements DataStore {
     if (!data.length) throw new DataError("forbidden", "Anketi silme yetkiniz yok. Yalnızca kurum yöneticileri silebilir.");
   }
 
+  async getPublicSurvey(id: ID): Promise<PublicSurvey | null> {
+    const { data, error } = await this.sb.rpc("get_public_survey", { p_id: id });
+    if (error) {
+      if (error.code === "22P02") return null; // geçersiz UUID
+      throw toDataError(error, "Anket yüklenemedi.");
+    }
+    return (data as PublicSurvey | null) ?? null;
+  }
+
+  async submitResponse(surveyId: ID, answers: Answers): Promise<void> {
+    const survey = await this.getPublicSurvey(surveyId);
+    if (!survey || survey.status !== "yayinda") throw new DataError("not_found", "Bu anket şu anda yanıt kabul etmiyor.");
+    const { error } = await this.sb.rpc("submit_response", { p_survey: surveyId, p_answers: cleanAnswers(survey.questions, answers) });
+    if (error) {
+      if (error.code === "23502" || error.code === "22023") throw new DataError("validation", error.message);
+      if (error.code === "23505") throw new DataError("validation", "Bu anketi daha önce yanıtladınız.");
+      throw toDataError(error, "Yanıtınız gönderilemedi.");
+    }
+  }
+
   async listResponses(surveyId: ID) {
-    const { data, error } = await this.sb.from("responses").select("*").eq("survey_id", surveyId).returns<ResponseRow[]>();
+    const { data, error } = await this.sb.from("responses").select("*").eq("survey_id", surveyId).order("created_at", { ascending: false }).returns<ResponseRow[]>();
     if (error) throw toDataError(error);
     return data.map(toResponse);
   }

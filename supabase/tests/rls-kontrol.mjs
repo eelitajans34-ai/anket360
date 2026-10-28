@@ -29,15 +29,20 @@ for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
   await db.exec(fs.readFileSync(new URL(f, dir), "utf8"));
 }
 await db.exec(`
-  grant usage on schema public, auth to authenticated;
-  grant select, insert, update, delete on all tables in schema public to authenticated;
-  grant execute on function auth.uid() to authenticated;
+  grant usage on schema public, auth to anon, authenticated;
+  -- Supabase varsayılanı gibi: tablo yetkileri iki role de verilir, erişimi RLS sınırlar
+  grant select, insert, update, delete on all tables in schema public to anon, authenticated;
+  grant execute on function auth.uid() to anon, authenticated;
 `);
 const A = "00000000-0000-0000-0000-00000000000a", B = "00000000-0000-0000-0000-00000000000b", C = "00000000-0000-0000-0000-00000000000c";
 await db.exec(`insert into auth.users (id, email, raw_user_meta_data) values
   ('${A}', 'Sahip@Kurum.com', '{"full_name":"Sahip"}'), ('${B}', 'uye@kurum.com', '{"full_name":"Üye"}'), ('${C}', 'yabanci@x.com', '{}');`);
 const as = async (uid, sql, params) => {
   await db.exec(`set role authenticated; select set_config('request.jwt.claim.sub', '${uid}', false);`);
+  try { return await db.query(sql, params); } finally { await db.exec("reset role;"); }
+};
+const asAnon = async (sql, params) => {
+  await db.exec(`set role anon; select set_config('request.jwt.claim.sub', '', false);`);
   try { return await db.query(sql, params); } finally { await db.exec("reset role;"); }
 };
 const expectFail = async (label, p) => { try { await p; console.log("BEKLENMEDİK BAŞARI:", label); process.exitCode = 1; } catch (e) { console.log("✓ reddedildi:", label, "→", e.message); } };
@@ -75,6 +80,55 @@ ok("yönetici anket siler", (await as(A, `delete from surveys where id=$1 return
 ok("sahip üyeyi çıkarır", (await as(A, `delete from memberships where user_id='${B}' returning *`)).rows.length === 1);
 ok("çıkarılan üye kurumu artık göremez", (await as(B, `select * from organizations`)).rows.length === 0);
 await expectFail("oturumsuz RPC", as("", `select * from create_organization('A','a','b','c','d')`));
+
+// ---------------- Aşama 3: herkese açık anket yanıtlama ----------------
+const sorular = JSON.stringify([
+  { id: "q1", type: "tek_secim", title: "Renk", required: true, options: ["Mavi", "Yeşil"] },
+  { id: "q2", type: "nps", title: "NPS", required: true },
+  { id: "q3", type: "uzun_metin", title: "Öneri", required: false },
+]);
+const ayar = (o = {}) => JSON.stringify({ anonymous: true, singleResponse: true, showProgress: true, ...o });
+const pub = (await as(A, `insert into surveys (org_id,title,created_by,questions,settings) values ($1,'Açık Anket','${A}',$2,$3) returning *`, [org.id, sorular, ayar()])).rows[0];
+const getPub = async (id) => (await asAnon(`select get_public_survey($1) as s`, [id])).rows[0].s;
+const gonder = (id, cevap, kim = null) =>
+  kim ? as(kim, `select submit_response($1, $2) as r`, [id, JSON.stringify(cevap)]) : asAnon(`select submit_response($1, $2) as r`, [id, JSON.stringify(cevap)]);
+
+ok("taslak anket katılımcıya gösterilmez", (await getPub(pub.id)) === null);
+await expectFail("taslak ankete yanıt", gonder(pub.id, { q1: "Mavi", q2: 5 }));
+await as(A, `update surveys set status='yayinda' where id=$1`, [pub.id]);
+const gorunen = await getPub(pub.id);
+ok("yayındaki anket ziyaretçiye kurum adıyla gösterilir", gorunen?.status === "yayinda" && gorunen.orgName === "Güneş Okulu" && gorunen.questions.length === 3);
+ok("ziyaretçi surveys tablosunu doğrudan okuyamaz", (await asAnon(`select * from surveys`)).rows.length === 0);
+await expectFail("ziyaretçi responses tablosuna doğrudan yazamaz", asAnon(`insert into responses (survey_id, answers) values ($1, '{}')`, [pub.id]));
+await expectFail("zorunlu soru eksik", gonder(pub.id, { q1: "Mavi" }));
+await expectFail("boş dizi zorunlu soruyu karşılamaz", gonder(pub.id, { q1: [], q2: 3 }));
+await expectFail("ankette olmayan soru anahtarı", gonder(pub.id, { q1: "Mavi", q2: 3, hack: "x" }));
+await expectFail("nesne olmayan yanıt", asAnon(`select submit_response($1, '[1,2]')`, [pub.id]));
+ok("ziyaretçi geçerli yanıt gönderir (0 puan geçerli)", !!(await gonder(pub.id, { q1: "Mavi", q2: 0 })).rows[0].r);
+ok("anonim ankette giriş yapmış kullanıcı tekrar yanıtlayabilir, kimliği kaydedilmez",
+  !!(await gonder(pub.id, { q1: "Yeşil", q2: 9 }, C)).rows[0].r && !!(await gonder(pub.id, { q1: "Yeşil", q2: 8 }, C)).rows[0].r &&
+  (await db.query(`select count(*)::int n from responses where survey_id=$1 and respondent_id is not null`, [pub.id])).rows[0].n === 0);
+
+const kimlikli = (await as(A, `insert into surveys (org_id,title,created_by,questions,settings,status) values ($1,'Kimlikli','${A}',$2,$3,'yayinda') returning *`, [org.id, sorular, ayar({ anonymous: false })])).rows[0];
+ok("kimlikli ankette ilk yanıt kabul edilir", !!(await gonder(kimlikli.id, { q1: "Mavi", q2: 1 }, C)).rows[0].r);
+await expectFail("kişi başı tek yanıt: ikinci yanıt", gonder(kimlikli.id, { q1: "Mavi", q2: 2 }, C));
+ok("kimlikli yanıtta katılımcı kimliği kaydedilir", (await db.query(`select respondent_id from responses where survey_id=$1`, [kimlikli.id])).rows[0].respondent_id === C);
+await as(A, `update surveys set settings = settings || '{"singleResponse": false}' where id=$1`, [kimlikli.id]);
+ok("tek yanıt kapalıysa aynı kişi tekrar yanıtlayabilir", !!(await gonder(kimlikli.id, { q1: "Mavi", q2: 3 }, C)).rows[0].r);
+
+await as(A, `update surveys set settings = settings || '{"endsAt": "2020-01-01"}' where id=$1`, [pub.id]);
+ok("süresi dolan anket kapalı görünür", (await getPub(pub.id))?.status === "kapali" && (await getPub(pub.id)).questions === undefined);
+await expectFail("süresi dolan ankete yanıt", gonder(pub.id, { q1: "Mavi", q2: 5 }));
+await as(A, `update surveys set status='kapali', settings = settings - 'endsAt' where id=$1`, [pub.id]);
+await expectFail("kapalı ankete yanıt", gonder(pub.id, { q1: "Mavi", q2: 5 }));
+
+ok("kurum üyesi yanıtları görür", (await as(A, `select * from responses where survey_id=$1`, [pub.id])).rows.length === 3);
+ok("yabancı yanıtları göremez", (await as(C, `select * from responses`)).rows.length === 0);
+ok("ziyaretçi yanıtları göremez", (await asAnon(`select * from responses`)).rows.length === 0);
+ok("yabancı yanıt silemez", (await as(C, `delete from responses returning id`)).rows.length === 0);
+ok("anket silinince yanıtları da silinir",
+  (await as(A, `delete from surveys where id=$1 returning id`, [pub.id])).rows.length === 1 &&
+  (await db.query(`select count(*)::int n from responses where survey_id=$1`, [pub.id])).rows[0].n === 0);
 
 console.log("pgcrypto token örneği:", (await db.query("select token from invitations limit 1")).rows[0]?.token);
 await client.end();

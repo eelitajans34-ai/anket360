@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Eye, LayoutTemplate, ListChecks, Plus, Save, Send, Settings2 } from "lucide-react";
+import { ArrowLeft, Eye, Inbox, LayoutTemplate, ListChecks, Plus, Save, Send, Settings2, Share2 } from "lucide-react";
 import { QuestionEditor } from "@/components/survey/QuestionEditor";
 import { SurveyPreview } from "@/components/survey/SurveyPreview";
+import { ShareDialog } from "@/components/survey/ShareDialog";
+import { ResponsesTable } from "@/components/survey/ResponsesTable";
 import { DEFAULT_SETTINGS, TEMPLATES, newQuestion } from "@/components/survey/templates";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert, Toggle } from "@/components/ui/Field";
@@ -13,7 +15,7 @@ import { db } from "@/lib/data";
 import type { Question, QuestionType, SurveyInput, SurveyStatus } from "@/lib/types";
 import { cn, uid } from "@/lib/utils";
 
-type Tab = "sorular" | "onizleme" | "ayarlar";
+type Tab = "sorular" | "onizleme" | "yanitlar" | "ayarlar";
 
 export default function SurveyBuilderPage() {
   const { id } = useParams();
@@ -27,6 +29,8 @@ export default function SurveyBuilderPage() {
   const [notFound, setNotFound] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [tab, setTab] = useState<Tab>("sorular");
+  // Yeni anket "Yayınla" ile kaydedildiyse paylaşım penceresini hemen aç
+  const [sharing, setSharing] = useState(() => (location.state as { saved?: SurveyStatus } | null)?.saved === "yayinda");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(() =>
     (location.state as { saved?: SurveyStatus } | null)?.saved === "yayinda"
@@ -85,6 +89,7 @@ export default function SurveyBuilderPage() {
         await db.updateSurvey(id, payload);
         setDraft(payload);
         setDirty(false);
+        if (status === "yayinda") setSharing(true);
       }
       setMsg({ kind: "success", text: status === "yayinda" ? "Anket yayınlandı." : status === "kapali" ? "Anket yanıtlara kapatıldı." : "Değişiklikler kaydedildi." });
     } catch (e) {
@@ -121,6 +126,7 @@ export default function SurveyBuilderPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {draft.status === "yayinda" && !isNew && !dirty && <button className="btn-primary" onClick={() => setSharing(true)}><Share2 className="h-4 w-4" />Paylaş</button>}
           {draft.status === "yayinda" && <button className="btn-secondary" disabled={saving} onClick={() => save("kapali")}>Yanıtlara kapat</button>}
           <button className="btn-secondary" disabled={saving} onClick={() => save()}><Save className="h-4 w-4" />{isNew ? "Taslak olarak kaydet" : "Kaydet"}</button>
           {draft.status !== "yayinda" && <button className="btn-primary" disabled={saving} onClick={() => save("yayinda")}><Send className="h-4 w-4" />Yayınla</button>}
@@ -130,7 +136,7 @@ export default function SurveyBuilderPage() {
       {msg && <div className="mb-4"><Alert kind={msg.kind}>{msg.text}</Alert></div>}
 
       <div className="mb-6 flex gap-1 border-b border-slate-200" role="tablist">
-        {([["sorular", "Sorular", ListChecks], ["onizleme", "Önizleme", Eye], ["ayarlar", "Ayarlar", Settings2]] as const).map(([k, label, Icon]) => (
+        {([["sorular", "Sorular", ListChecks], ["onizleme", "Önizleme", Eye], ...(isNew ? [] : [["yanitlar", "Yanıtlar", Inbox] as const]), ["ayarlar", "Ayarlar", Settings2]] as const).map(([k, label, Icon]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn("-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium", tab === k ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-800")}>
             <Icon className="h-4 w-4" />{label}
             {k === "sorular" && <span className="rounded-full bg-slate-100 px-1.5 text-xs text-slate-600">{draft.questions.length}</span>}
@@ -179,6 +185,10 @@ export default function SurveyBuilderPage() {
           </aside>
         </div>
       )}
+
+      {tab === "yanitlar" && id && <ResponsesTable surveyId={id} questions={draft.questions} />}
+
+      {sharing && id && <ShareDialog surveyId={id} title={draft.title} onClose={() => setSharing(false)} />}
 
       {tab === "onizleme" && <SurveyPreview key={JSON.stringify(draft.questions.map((q) => q.id))} survey={draft} />}
 

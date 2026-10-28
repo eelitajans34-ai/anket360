@@ -1,32 +1,64 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
-import type { Question, SurveyInput } from "@/lib/types";
+import { Alert } from "@/components/ui/Field";
+import { isAnswered, missingRequired } from "@/lib/answers";
+import type { Answers, AnswerValue, Question, SurveyInput } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-type Answers = Record<string, string | string[] | number>;
+type FormSurvey = Pick<SurveyInput, "title" | "description" | "questions" | "settings">;
 
-/** Katılımcının göreceği anket görünümü (Aşama 1'de yalnız önizleme). */
-export function SurveyPreview({ survey }: { survey: SurveyInput }) {
+interface SurveyFormProps {
+  survey: FormSurvey;
+  /** Kurum adı (katılımcı sayfasında başlığın üstünde gösterilir) */
+  orgName?: string;
+  /** Verilmezse önizleme modunda çalışır: hiçbir şey kaydedilmez. */
+  onSubmit?(answers: Answers): Promise<void>;
+}
+
+/** Katılımcının gördüğü anket formu; panelde önizleme, /a/:id sayfasında gerçek yanıt için kullanılır. */
+export function SurveyForm({ survey, orgName, onSubmit }: SurveyFormProps) {
+  const preview = !onSubmit;
   const [answers, setAnswers] = useState<Answers>({});
   const [submitted, setSubmitted] = useState(false);
   const [missing, setMissing] = useState<string[]>([]);
-  const set = (id: string, v: Answers[string]) => setAnswers((a) => ({ ...a, [id]: v }));
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const set = (id: string, v: AnswerValue) => {
+    setAnswers((a) => ({ ...a, [id]: v }));
+    setMissing((m) => m.filter((x) => x !== id));
+  };
 
   const answered = survey.questions.filter((q) => isAnswered(answers[q.id])).length;
 
-  function submit() {
-    const m = survey.questions.filter((q) => q.required && !isAnswered(answers[q.id])).map((q) => q.id);
+  async function submit() {
+    setError(null);
+    const m = missingRequired(survey.questions, answers);
     setMissing(m);
-    if (!m.length) setSubmitted(true);
+    if (m.length) {
+      document.getElementById(`soru-${m[0]}`)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (!onSubmit) return setSubmitted(true);
+    setBusy(true);
+    try {
+      await onSubmit(answers);
+      setSubmitted(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Yanıtınız gönderilemedi.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   if (submitted) {
     return (
-      <div className="card mx-auto max-w-2xl p-10 text-center">
+      <div className="card mx-auto max-w-2xl p-10 text-center" role="status">
         <p className="text-4xl">🎉</p>
         <h2 className="mt-3 text-xl font-semibold">Teşekkürler!</h2>
-        <p className="mt-2 text-sm text-slate-600">Yanıtlarınız kaydedildi. (Önizleme — gerçek yanıt kaydedilmedi.)</p>
-        <button className="btn-secondary mt-6" onClick={() => { setSubmitted(false); setAnswers({}); }}>Önizlemeyi sıfırla</button>
+        <p className="mt-2 text-sm text-slate-600">
+          {preview ? "Önizleme — gerçek yanıt kaydedilmedi." : "Yanıtlarınız kaydedildi. Katılımınız için teşekkür ederiz."}
+        </p>
+        {preview && <button className="btn-secondary mt-6" onClick={() => { setSubmitted(false); setAnswers({}); }}>Önizlemeyi sıfırla</button>}
       </div>
     );
   }
@@ -36,20 +68,22 @@ export function SurveyPreview({ survey }: { survey: SurveyInput }) {
       <div className="card overflow-hidden">
         <div className="h-2 bg-brand-600" />
         <div className="p-6">
-          <h2 className="text-2xl font-bold">{survey.title || "Adsız anket"}</h2>
+          {orgName && <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-600">{orgName}</p>}
+          <h1 className="text-2xl font-bold">{survey.title || "Adsız anket"}</h1>
           {survey.description && <p className="mt-2 whitespace-pre-line text-sm text-slate-600">{survey.description}</p>}
           {survey.settings.anonymous && <p className="mt-3 text-xs font-medium text-emerald-700">🔒 Bu anket anonimdir; kimlik bilgileriniz kaydedilmez.</p>}
+          {survey.questions.some((q) => q.required) && <p className="mt-3 text-xs text-slate-500"><span className="text-red-500">*</span> işaretli sorular zorunludur.</p>}
         </div>
       </div>
       {survey.settings.showProgress && survey.questions.length > 0 && (
-        <div className="card px-5 py-3">
+        <div className="card sticky top-2 z-10 px-5 py-3">
           <div className="flex justify-between text-xs text-slate-500"><span>İlerleme</span><span>{answered}/{survey.questions.length}</span></div>
           <div className="mt-1.5 h-1.5 rounded-full bg-slate-100"><div className="h-1.5 rounded-full bg-brand-600 transition-all" style={{ width: `${(answered / survey.questions.length) * 100}%` }} /></div>
         </div>
       )}
       {survey.questions.length === 0 && <p className="card p-8 text-center text-sm text-slate-500">Önizlemek için soru ekleyin.</p>}
       {survey.questions.map((q, i) => (
-        <fieldset key={q.id} className={cn("card p-6", missing.includes(q.id) && "border-red-300 ring-1 ring-red-300")}>
+        <fieldset id={`soru-${q.id}`} key={q.id} className={cn("card scroll-mt-24 p-6", missing.includes(q.id) && "border-red-300 ring-1 ring-red-300")}>
           <legend className="sr-only">{q.title}</legend>
           <p className="font-medium">
             {i + 1}. {q.title || <span className="text-slate-400">(Soru metni yok)</span>}
@@ -60,18 +94,23 @@ export function SurveyPreview({ survey }: { survey: SurveyInput }) {
           {missing.includes(q.id) && <p className="mt-2 text-xs text-red-600">Bu soru zorunludur.</p>}
         </fieldset>
       ))}
-      {survey.questions.length > 0 && <div className="flex justify-end"><button className="btn-primary" onClick={submit}>Gönder</button></div>}
+      {error && <Alert>{error}</Alert>}
+      {missing.length > 0 && <Alert>Lütfen {missing.length} zorunlu soruyu yanıtlayın.</Alert>}
+      {survey.questions.length > 0 && (
+        <div className="flex justify-end">
+          <button className="btn-primary px-8" onClick={submit} disabled={busy}>{busy ? "Gönderiliyor…" : "Gönder"}</button>
+        </div>
+      )}
     </div>
   );
 }
 
-function isAnswered(v: Answers[string] | undefined) {
-  if (v === undefined || v === "") return false;
-  if (Array.isArray(v)) return v.length > 0;
-  return true;
+/** Panel önizlemesi için geriye dönük uyumlu ad. */
+export function SurveyPreview({ survey }: { survey: FormSurvey }) {
+  return <SurveyForm survey={survey} />;
 }
 
-function QuestionInput({ q, value, onChange }: { q: Question; value: Answers[string] | undefined; onChange(v: Answers[string]): void }) {
+function QuestionInput({ q, value, onChange }: { q: Question; value: AnswerValue | undefined; onChange(v: AnswerValue): void }) {
   const name = `q-${q.id}`;
   switch (q.type) {
     case "kisa_metin":

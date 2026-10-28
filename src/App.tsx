@@ -15,6 +15,7 @@ import ProfilePage from "@/pages/panel/ProfilePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import InvitePage from "@/pages/InvitePage";
+import PublicSurveyPage from "@/pages/PublicSurveyPage";
 
 function Root() {
   return (
@@ -31,6 +32,7 @@ export const routes: RouteObject[] = [
       { path: "/", element: <HomePage /> },
       { path: "/sifre-yenile", element: <ResetPasswordPage /> },
       { path: "/davet/:token", element: <InvitePage /> },
+      { path: "/a/:id", element: <PublicSurveyPage /> },
       {
         element: <GuestOnly />,
         children: [

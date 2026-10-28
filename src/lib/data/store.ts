@@ -1,10 +1,12 @@
 import type {
+  Answers,
   ID,
   Invitation,
   Membership,
   Organization,
   OrganizationInput,
   OrgRole,
+  PublicSurvey,
   SignUpInput,
   Survey,
   SurveyInput,
@@ -53,6 +55,11 @@ export interface DataStore {
   duplicateSurvey(id: ID, userId: ID): Promise<Survey>;
   deleteSurvey(id: ID): Promise<void>;
   listResponses(surveyId: ID): Promise<SurveyResponse[]>;
+
+  // Katılımcı (giriş gerektirmez)
+  /** Taslak veya olmayan anket için null döner. */
+  getPublicSurvey(id: ID): Promise<PublicSurvey | null>;
+  submitResponse(surveyId: ID, answers: Answers): Promise<void>;
 }
 
 export class DataError extends Error {

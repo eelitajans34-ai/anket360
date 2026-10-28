@@ -1,9 +1,11 @@
 import type {
+  Answers,
   ID,
   Invitation,
   Membership,
   Organization,
   OrganizationInput,
+  PublicSurvey,
   SignUpInput,
   Survey,
   SurveyInput,
@@ -11,6 +13,7 @@ import type {
   User,
 } from "@/lib/types";
 import { isValidEmail, passwordIssues, slugify, uid } from "@/lib/utils";
+import { cleanAnswers, isPastEndDate, missingRequired } from "@/lib/answers";
 import { DataError, type DataStore } from "./store";
 
 /**
@@ -31,7 +34,7 @@ interface DB {
   memberships: Membership[];
   invitations: Invitation[];
   surveys: Survey[];
-  responses: SurveyResponse[];
+  responses: Array<SurveyResponse & { respondentId?: ID }>;
 }
 
 const DB_KEY = "anket360:db";
@@ -340,7 +343,51 @@ export class LocalStore implements DataStore {
   }
 
   async listResponses(surveyId: ID): Promise<SurveyResponse[]> {
-    return this.read().responses.filter((r) => r.surveyId === surveyId);
+    return this.read()
+      .responses.filter((r) => r.surveyId === surveyId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  // ---------- Katılımcı ----------
+
+  async getPublicSurvey(id: ID): Promise<PublicSurvey | null> {
+    const db = this.read();
+    const s = db.surveys.find((x) => x.id === id);
+    if (!s || s.status === "taslak") return null;
+    if (s.status === "kapali" || isPastEndDate(s.settings.endsAt)) return { id: s.id, status: "kapali", title: s.title };
+    const org = db.organizations.find((o) => o.id === s.orgId);
+    return {
+      id: s.id,
+      status: "yayinda",
+      title: s.title,
+      description: s.description,
+      questions: s.questions,
+      settings: s.settings,
+      orgName: org?.name ?? "",
+    };
+  }
+
+  async submitResponse(surveyId: ID, answers: Answers): Promise<void> {
+    const sessionId = this.storage.getItem(SESSION_KEY);
+    this.mutate((db) => {
+      const s = db.surveys.find((x) => x.id === surveyId);
+      if (!s || s.status !== "yayinda") throw new DataError("not_found", "Bu anket şu anda yanıt kabul etmiyor.");
+      if (isPastEndDate(s.settings.endsAt)) throw new DataError("not_found", "Bu anketin süresi doldu.");
+      const ids = new Set(s.questions.map((q) => q.id));
+      if (Object.keys(answers).some((k) => !ids.has(k))) {
+        throw new DataError("validation", "Yanıtlar ankette olmayan bir soru içeriyor.");
+      }
+      const missing = missingRequired(s.questions, answers);
+      if (missing.length) {
+        const q = s.questions.find((x) => x.id === missing[0])!;
+        throw new DataError("validation", `Zorunlu soru yanıtlanmadı: ${q.title}`);
+      }
+      const respondentId = s.settings.anonymous ? undefined : (sessionId ?? undefined);
+      if (respondentId && s.settings.singleResponse && db.responses.some((r) => r.surveyId === s.id && r.respondentId === respondentId)) {
+        throw new DataError("validation", "Bu anketi daha önce yanıtladınız.");
+      }
+      db.responses.push({ id: uid(), surveyId: s.id, respondentId, answers: cleanAnswers(s.questions, answers), createdAt: now() });
+    });
   }
 }
 

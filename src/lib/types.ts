@@ -73,12 +73,20 @@ export interface Survey {
   updatedAt: string;
 }
 
+export type AnswerValue = string | string[] | number;
+export type Answers = Record<ID, AnswerValue>;
+
 export interface SurveyResponse {
   id: ID;
   surveyId: ID;
-  answers: Record<ID, string | string[] | number | boolean | null>;
+  answers: Answers;
   createdAt: string;
 }
+
+/** Katılımcıya gösterilen anket bilgisi. Kapalı anketlerde yalnızca başlık döner. */
+export type PublicSurvey =
+  | { id: ID; status: "kapali"; title: string }
+  | (Pick<Survey, "id" | "title" | "description" | "questions" | "settings"> & { status: "yayinda"; orgName: string });
 
 export interface Invitation {
   id: ID;

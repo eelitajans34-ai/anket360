@@ -58,6 +58,13 @@ Değişkenler yoksa uygulama Demo modunda (tarayıcı içi veri) çalışır.
 | Üye çıkarma (sahip hariç) | ✓ | ✓ | – | – |
 | Anket oluşturma / düzenleme | ✓ | ✓ | ✓ | – |
 | Anket silme | ✓ | ✓ | – | – |
+| Yanıtları görme | ✓ | ✓ | ✓ | – |
+| Yayındaki ankete yanıt verme (`submit_response`) | ✓ | ✓ | ✓ | ✓ (giriş gerekmez) |
+
+Katılımcılar `surveys` ve `responses` tablolarına doğrudan erişemez; yalnızca `get_public_survey` ve
+`submit_response` fonksiyonlarını çağırabilir. Yanıtlar sunucuda doğrulanır (yayında mı, süresi dolmuş mu,
+zorunlu sorular, bilinmeyen soru anahtarı, 64 KB sınırı, kimlikli anketlerde kişi başı tek yanıt).
+Anonim anketlerde tek yanıt kuralı yalnızca tarayıcıda uygulanır.
 
 ## Ekip daveti
 Yönetici, Kurum sayfasından e-posta + rol girer; davet bağlantısı (`/davet/<kod>`) panoya kopyalanır ve kişiye iletilir.

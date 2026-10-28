@@ -31,6 +31,7 @@ npm run build      # tip denetimi + üretim derlemesi
 | `/panel/profil` | Profil ve şifre değiştirme |
 | `/sifre-yenile` | Şifre sıfırlama e-postasındaki bağlantının açtığı sayfa |
 | `/davet/:kod` | Ekip davetini kabul etme |
+| `/a/:id` | Herkese açık anket — katılımcılar giriş yapmadan yanıtlar |
 
 ## Veri katmanı
 - `.env` içinde Supabase bilgileri varsa veriler **Supabase**'te tutulur.

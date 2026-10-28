@@ -110,4 +110,31 @@ describe("SupabaseStore (sahte istemci)", () => {
     nextResults = [{ data: null, error: { code: "22P02", message: "invalid input syntax for type uuid" } }];
     await expect(store.getSurvey("abc")).resolves.toBeNull();
   });
+
+  it("herkese açık anketi RPC ile alır; geçersiz kimlikte null döner", async () => {
+    nextResults = [{ data: { id: "s1", status: "kapali", title: "T" }, error: null }];
+    await expect(store.getPublicSurvey("s1")).resolves.toEqual({ id: "s1", status: "kapali", title: "T" });
+    expect(calls[0]).toMatchObject({ rpc: "get_public_survey" });
+    expect(calls[0]!.ops[0]![1][0]).toEqual({ p_id: "s1" });
+    nextResults = [{ data: null, error: { code: "22P02", message: "invalid uuid" } }];
+    await expect(store.getPublicSurvey("abc")).resolves.toBeNull();
+  });
+
+  it("yanıtı temizleyip submit_response ile gönderir ve sunucu hatasını Türkçe iletir", async () => {
+    const survey = {
+      id: "s1", status: "yayinda", title: "T", description: "", orgName: "K",
+      settings: { anonymous: true, singleResponse: false, showProgress: true },
+      questions: [{ id: "q1", type: "kisa_metin", title: "Ad", required: true }],
+    };
+    nextResults = [{ data: survey, error: null }, { data: "r1", error: null }];
+    await store.submitResponse("s1", { q1: "Ali", yok: "x" });
+    expect(calls[1]).toMatchObject({ rpc: "submit_response" });
+    expect(calls[1]!.ops[0]![1][0]).toEqual({ p_survey: "s1", p_answers: { q1: "Ali" } });
+
+    nextResults = [{ data: survey, error: null }, { data: null, error: { code: "23502", message: "Zorunlu soru yanıtlanmadı: Ad" } }];
+    await expect(store.submitResponse("s1", {})).rejects.toMatchObject({ code: "validation", message: "Zorunlu soru yanıtlanmadı: Ad" });
+
+    nextResults = [{ data: { id: "s1", status: "kapali", title: "T" }, error: null }];
+    await expect(store.submitResponse("s1", { q1: "Ali" })).rejects.toThrow("yanıt kabul etmiyor");
+  });
 });
