@@ -28,5 +28,6 @@
 - [ ] **Özel SMTP** — Supabase ücretsiz planı saatte birkaç e-posta gönderir ve Türkçe şablonlara izin vermez; SMTP tanımlanınca iş akışı Türkçe şablonları otomatik uygular
 - [x] **Aşama 3** — Herkese açık anket sayfası (`/a/:id`), sunucu tarafı doğrulamalı yanıt kaydı (`get_public_survey` / `submit_response` RPC), bağlantı + QR + WhatsApp/e-posta paylaşımı, Yanıtlar sekmesi (65 test + 47 RLS kontrolü)
 - [x] **Koşullu sorular** — `showIf` (önceki soruya bağlı; eşittir/içerir/en az/en çok/yanıtlandı…); kurallar `src/lib/conditions.ts` ve SQL `gorunur_sorular` ile birebir aynı, ortak örnekler `supabase/tests/kosul-ornekleri.json`
+- [x] **PDF rapor** — `src/lib/pdf-report.ts` (jsPDF + gömülü DejaVu Sans, vektör grafikler, sayfa numarası); jsPDF ve yazı tipleri yalnızca PDF indirilirken yüklenir
 - [ ] Davet e-postası otomatik gönderimi — özel SMTP gerektirir
 - [x] **Aşama 4** — Rapor sekmesi: tarih filtresi, özet (yanıt, günlük ortalama, son yanıt, NPS), günlük yanıt grafiği, soru bazında grafikler (seçenek dağılımı, puan ortalaması, NPS kırılımı, metin yanıtları); Excel (.xlsx) ve CSV dışa aktarma; 1000+ yanıt için sayfalı çekme (80 test)

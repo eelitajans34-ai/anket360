@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { BarChart3, FileSpreadsheet, FileText } from "lucide-react";
+import { BarChart3, FileDown, FileSpreadsheet, FileText } from "lucide-react";
 import { ColumnChart, HBarList, NpsBar, StatTile } from "./charts";
 import { db } from "@/lib/data";
 import { download, fileBaseName, responseRows, toCsv, toXlsx } from "@/lib/export";
@@ -31,6 +31,34 @@ export function ReportView({ surveyId, title, questions }: { surveyId: string; t
   const last = responses.reduce<string | null>((m, r) => (!m || r.createdAt > m ? r.createdAt : m), null);
   const nps = reports.find((r): r is Extract<QuestionReport, { kind: "nps" }> => r.kind === "nps" && r.score !== null);
 
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  async function exportPdf() {
+    setPdfBusy(true);
+    setPdfError(null);
+    try {
+      const { buildReportPdf, loadPdfFonts } = await import("@/lib/pdf-report");
+      const bytes = await buildReportPdf(
+        {
+          title,
+          rangeLabel: RANGE_LABEL[range],
+          generatedAt: new Date(),
+          summary: { count: responses.length, dailyAvg: daily.length ? responses.length / daily.length : null, last, nps: nps?.score ?? null, npsCount: nps?.answered ?? 0 },
+          daily,
+          reports,
+          shown: Object.fromEntries(questions.map((q) => [q.id, q.showIf ? (shownCounts.get(q.id) ?? 0) : responses.length])),
+        },
+        await loadPdfFonts(),
+      );
+      download(bytes, `${fileBaseName(title).replace("-yanitlar-", "-rapor-")}.pdf`, "application/pdf");
+    } catch (e) {
+      setPdfError(e instanceof Error ? e.message : "PDF oluşturulamadı.");
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   async function exportAs(kind: "csv" | "xlsx") {
     const rows = responseRows(questions, responses);
     const name = fileBaseName(title);
@@ -52,11 +80,14 @@ export function ReportView({ surveyId, title, questions }: { surveyId: string; t
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-secondary px-3 py-2" onClick={exportPdf} disabled={pdfBusy}><FileDown className="h-4 w-4" />{pdfBusy ? "Hazırlanıyor…" : "PDF"}</button>
           <button className="btn-secondary px-3 py-2" onClick={() => exportAs("xlsx")} disabled={!responses.length}><FileSpreadsheet className="h-4 w-4" />Excel</button>
           <button className="btn-secondary px-3 py-2" onClick={() => exportAs("csv")} disabled={!responses.length}><FileText className="h-4 w-4" />CSV</button>
         </div>
       </div>
+
+      {pdfError && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700">PDF oluşturulamadı: {pdfError}</p>}
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Özet">
         <StatTile label="Yanıt sayısı" value={responses.length.toLocaleString("tr-TR")} hint={RANGE_LABEL[range]} />
