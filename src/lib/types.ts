@@ -76,6 +76,8 @@ export interface SurveySettings {
   singleResponse: boolean;
   showProgress: boolean;
   endsAt?: string;
+  /** Anketin kategorisi: belediye, siyasi, stk, isletme, genel */
+  category?: string;
 }
 
 export interface Survey {

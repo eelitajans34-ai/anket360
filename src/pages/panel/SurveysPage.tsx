@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ClipboardList, Copy, MoreVertical, Pencil, Plus, Search, Share2, Trash2 } from "lucide-react";
 import { ShareDialog } from "@/components/survey/ShareDialog";
+import { categoryById } from "@/components/survey/categories";
 import { PageHeader } from "./PanelLayout";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert } from "@/components/ui/Field";
@@ -89,7 +90,7 @@ export default function SurveysPage() {
               <li key={s.id} className="flex items-center gap-4 px-5 py-4">
                 <div className="min-w-0 flex-1">
                   <Link to={`/panel/anketler/${s.id}/duzenle`} className="block truncate font-medium hover:text-brand-700">{s.title}</Link>
-                  <p className="mt-0.5 text-xs text-slate-500">{s.questions.length} soru · Oluşturma: {formatDate(s.createdAt)} · Güncelleme: {formatDate(s.updatedAt)}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{categoryById(s.settings.category) && `${categoryById(s.settings.category)!.emoji} ${categoryById(s.settings.category)!.name} · `}{s.questions.length} soru · Oluşturma: {formatDate(s.createdAt)} · Güncelleme: {formatDate(s.updatedAt)}</p>
                 </div>
                 <StatusBadge status={s.status} />
                 <div className="relative">

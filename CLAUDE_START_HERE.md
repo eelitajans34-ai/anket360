@@ -19,6 +19,9 @@
 - `.github/workflows/yayin.yml` — test → Supabase migration/ayar → GitHub Pages yayını (kurulum: `docs/SUPABASE-KURULUM.md`)
 - `supabase/tests/rls-kontrol.mjs` — RLS kuralları için yerel PostgreSQL testi (`npm run test:rls`)
 
+## Ürün yönü (kullanıcı isteği)
+Sade, herkesin anlayacağı anket uygulaması. Yeni ankette önce alan seçilir (Belediye, Siyasi Parti, STK/Dernek, İşletme, Genel), sonra o alanın hazır anketi (`src/components/survey/categories.ts`). Kullanıcı açıkça istemeden yeni özellik/kapsam ekleme; önce sor.
+
 ## Aşamalar
 - [x] **Aşama 1** — Proje kurulumu, Türkçe ana sayfa, giriş/kayıt/şifre sıfırlama, kurum oluşturma, yönetim paneli, anket oluşturucu, testler (21 test)
 - [x] **Aşama 2** — Supabase veri katmanı, şema + RLS, e-posta doğrulama, şifre sıfırlama/değiştirme, ekip daveti ve üye çıkarma (50 birim/arayüz testi + 24 RLS kontrolü)

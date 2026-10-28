@@ -94,7 +94,7 @@ describe("Uygulama akışları", () => {
     await seedUser();
     const user = userEvent.setup();
     const router = renderAt("/panel/anketler/yeni");
-    await screen.findByRole("heading", { name: "Yeni anket oluştur" });
+    await screen.findByRole("heading", { name: "Anketiniz kimin için?" });
 
     await user.click(screen.getByRole("button", { name: /Boş anket/ }));
     const title = screen.getByLabelText("Anket başlığı");
@@ -132,7 +132,8 @@ describe("Uygulama akışları", () => {
     await seedUser();
     const user = userEvent.setup();
     renderAt("/panel/anketler/yeni");
-    await user.click(await screen.findByRole("button", { name: /Müşteri memnuniyeti/ }));
+    await user.click(await screen.findByRole("button", { name: /İşletme/ }));
+    await user.click(screen.getByRole("button", { name: /Müşteri memnuniyeti/ }));
     await user.click(screen.getByRole("tab", { name: /Önizleme/ }));
     await user.click(screen.getByRole("button", { name: "Gönder" }));
     expect(screen.getAllByText("Bu soru zorunludur.").length).toBe(3);

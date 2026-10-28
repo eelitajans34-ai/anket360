@@ -7,7 +7,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 
 const FEATURES = [
-  { icon: LayoutTemplate, title: "Sürükle-bırak anket oluşturucu", text: "9 farklı soru tipiyle dakikalar içinde profesyonel anketler hazırlayın." },
+  { icon: LayoutTemplate, title: "Hazır anketler", text: "Belediye, siyasi parti, STK ve işletmeler için hazır sorularla dakikalar içinde başlayın." },
   { icon: Users, title: "Kurum ve ekip yönetimi", text: "Kurumunuzu oluşturun, ekip arkadaşlarınızı rol bazlı yetkilerle davet edin." },
   { icon: BarChart3, title: "Anlık raporlar", text: "Yanıtları grafiklerle izleyin, NPS ve memnuniyet skorlarını takip edin." },
   { icon: Lock, title: "KVKK uyumlu", text: "Veriler Türkiye mevzuatına uygun saklanır; anonim anket seçeneği sunulur." },
@@ -17,17 +17,17 @@ const FEATURES = [
 
 const STEPS = [
   { n: 1, title: "Kurumunuzu oluşturun", text: "Ücretsiz hesap açın ve kurum bilgilerinizi girin. Kredi kartı gerekmez." },
-  { n: 2, title: "Anketinizi tasarlayın", text: "Hazır soru tiplerini kullanarak anketinizi oluşturun, önizleyin ve yayınlayın." },
+  { n: 2, title: "Alanınızı seçin", text: "Belediye, siyasi parti, STK, işletme… Size uygun hazır anketi seçin, dilerseniz soruları değiştirin." },
   { n: 3, title: "Sonuçları analiz edin", text: "Gelen yanıtları panelden anlık izleyin, raporları dışa aktarın." },
 ];
 
 const USE_CASES = [
-  { icon: Building2, title: "İnsan Kaynakları", text: "Çalışan bağlılığı, 360° değerlendirme, işe alım geri bildirimi." },
-  { icon: ShoppingBag, title: "Müşteri Deneyimi", text: "Memnuniyet, NPS ve satış sonrası anketleri." },
-  { icon: GraduationCap, title: "Eğitim Kurumları", text: "Öğrenci, veli ve ders değerlendirme anketleri." },
-  { icon: HeartPulse, title: "Sağlık", text: "Hasta memnuniyeti ve hizmet kalitesi ölçümü." },
-  { icon: Globe2, title: "Kamu & Belediye", text: "Vatandaş görüşü ve hizmet memnuniyeti araştırmaları." },
-  { icon: ClipboardList, title: "Etkinlik & Eğitim", text: "Katılımcı geri bildirimi ve kayıt formları." },
+  { icon: Globe2, title: "Belediyeler", text: "Vatandaş memnuniyeti, mahalle ihtiyaçları ve etkinlik değerlendirmesi." },
+  { icon: ClipboardList, title: "Siyasi Partiler", text: "Gündem ve öncelikler, üye ve gönüllü görüşleri, proje desteği — anonim olarak." },
+  { icon: HeartPulse, title: "STK ve Dernekler", text: "Üye memnuniyeti, gönüllü ve bağışçı anketleri, eğitim değerlendirmesi." },
+  { icon: ShoppingBag, title: "İşletmeler", text: "Müşteri memnuniyeti, çalışan memnuniyeti, ürün ve hizmet geri bildirimi." },
+  { icon: GraduationCap, title: "Eğitim Kurumları", text: "Öğrenci, veli ve eğitim değerlendirme anketleri." },
+  { icon: Building2, title: "Herkes İçin", text: "Etkinlikler ve her türlü görüş toplama için genel anketler." },
 ];
 
 const PLANS = [
@@ -61,8 +61,8 @@ export default function HomePage() {
                 Kurumunuzun sesini <span className="text-brand-600">360°</span> dinleyin
               </h1>
               <p className="mt-5 max-w-xl text-lg text-slate-600">
-                Çalışan, müşteri ve paydaş anketlerini dakikalar içinde oluşturun, paylaşın ve sonuçları anlık
-                raporlarla analiz edin. Tamamen Türkçe, KVKK uyumlu.
+                Belediyeler, siyasi partiler, STK'lar ve işletmeler için hazır anketler. Alanınızı seçin, bağlantıyı paylaşın,
+                sonuçları anında görün. Tamamen Türkçe, KVKK uyumlu.
               </p>
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link to="/kayit" className="btn-primary px-6 py-3 text-base">Ücretsiz hesap oluştur</Link>
@@ -123,7 +123,7 @@ export default function HomePage() {
 
         {/* Kullanım alanları */}
         <section className="mx-auto max-w-6xl px-4 py-20">
-          <SectionTitle eyebrow="Kullanım Alanları" title="Her sektöre uygun" />
+          <SectionTitle eyebrow="Kimler İçin?" title="Her kesime uygun hazır anketler" />
           <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {USE_CASES.map(({ icon: Icon, title, text }) => (
               <div key={title} className="flex gap-4 rounded-xl border border-slate-200 p-5">

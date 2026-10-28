@@ -4,6 +4,7 @@ export const SECTORS = [
   "Eğitim",
   "Sağlık",
   "Kamu / Belediye",
+  "Siyasi Parti",
   "Perakende",
   "Üretim / Sanayi",
   "Bilişim / Yazılım",

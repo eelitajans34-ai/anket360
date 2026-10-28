@@ -6,7 +6,8 @@ import { SurveyPreview } from "@/components/survey/SurveyPreview";
 import { ShareDialog } from "@/components/survey/ShareDialog";
 import { ResponsesTable } from "@/components/survey/ResponsesTable";
 import { ReportView } from "@/components/report/ReportView";
-import { DEFAULT_SETTINGS, TEMPLATES, newQuestion } from "@/components/survey/templates";
+import { DEFAULT_SETTINGS, newQuestion } from "@/components/survey/templates";
+import { CATEGORIES, blankSurvey, categoryById, suggestedCategory, type CategoryId } from "@/components/survey/categories";
 import { conditionError } from "@/lib/conditions";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert, Toggle } from "@/components/ui/Field";
@@ -253,29 +254,71 @@ function AddQuestionMenu({ onAdd, vertical, className }: { onAdd(t: QuestionType
 }
 
 function TemplatePicker({ onPick }: { onPick(d: SurveyInput): void }) {
+  const { activeOrg } = useAuth();
+  const suggested = suggestedCategory(activeOrg?.sector);
+  const [categoryId, setCategoryId] = useState<CategoryId | null>(null);
+  const category = categoryById(categoryId ?? undefined);
+
+  if (!category) {
+    const ordered = suggested ? [...CATEGORIES].sort((a, b) => Number(b.id === suggested) - Number(a.id === suggested)) : CATEGORIES;
+    return (
+      <div>
+        <div className="mb-8 flex items-center gap-3">
+          <Link to="/panel/anketler" className="btn-ghost px-2" aria-label="Anketlere dön"><ArrowLeft className="h-5 w-5" /></Link>
+          <div>
+            <p className="text-sm font-medium text-brand-600">Adım 1 / 2</p>
+            <h1 className="text-2xl font-bold">Anketiniz kimin için?</h1>
+            <p className="text-sm text-slate-600">Bir alan seçin; size uygun hazır anketleri gösterelim.</p>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {ordered.map((c) => (
+            <button key={c.id} onClick={() => setCategoryId(c.id)} className="card group relative flex items-start gap-4 p-5 text-left transition hover:border-brand-400 hover:shadow-md">
+              <span className="text-4xl leading-none" aria-hidden>{c.emoji}</span>
+              <span className="min-w-0">
+                <span className="block text-lg font-semibold">{c.name}</span>
+                <span className="mt-1 block text-sm text-slate-500">{c.description}</span>
+                <span className="mt-3 block text-xs font-medium text-slate-400">{c.surveys.length} hazır anket</span>
+              </span>
+              {c.id === suggested && <span className="absolute right-3 top-3 rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">Kurumunuz için</span>}
+            </button>
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button className="btn-ghost text-brand-600" onClick={() => onPick(blankSurvey())}><Plus className="h-4 w-4" />Boş anket ile başla</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="mb-8 flex items-center gap-3">
-        <Link to="/panel/anketler" className="btn-ghost px-2" aria-label="Anketlere dön"><ArrowLeft className="h-5 w-5" /></Link>
+        <button className="btn-ghost px-2" onClick={() => setCategoryId(null)} aria-label="Alan seçimine dön"><ArrowLeft className="h-5 w-5" /></button>
         <div>
-          <h1 className="text-2xl font-bold">Yeni anket oluştur</h1>
-          <p className="text-sm text-slate-600">Boş bir anketle başlayın ya da hazır şablonlardan birini seçin.</p>
+          <p className="text-sm font-medium text-brand-600">Adım 2 / 2 · {category.emoji} {category.name}</p>
+          <h1 className="text-2xl font-bold">Hazır bir anket seçin</h1>
+          <p className="text-sm text-slate-600">Soruları sonra dilediğiniz gibi değiştirebilirsiniz.</p>
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {TEMPLATES.map((t) => {
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {category.surveys.map((t) => {
           const preview = t.build();
           return (
             <button key={t.id} onClick={() => onPick(t.build())} className="card group flex flex-col p-5 text-left transition hover:border-brand-400 hover:shadow-md">
-              <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white">
-                {t.id === "bos" ? <Plus className="h-5 w-5" /> : <LayoutTemplate className="h-5 w-5" />}
-              </span>
+              <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600 group-hover:bg-brand-600 group-hover:text-white"><LayoutTemplate className="h-5 w-5" /></span>
               <span className="font-semibold">{t.name}</span>
               <span className="mt-1 flex-1 text-sm text-slate-500">{t.description}</span>
-              <span className="mt-4 text-xs font-medium text-slate-400">{preview.questions.length} soru</span>
+              <span className="mt-3 line-clamp-2 text-xs text-slate-400">{preview.questions.slice(0, 2).map((q) => q.title).join(" · ")}…</span>
+              <span className="mt-3 text-xs font-medium text-slate-500">{preview.questions.length} soru{preview.settings.anonymous && " · anonim"}</span>
             </button>
           );
         })}
+        <button onClick={() => onPick(blankSurvey(category.id))} className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 p-5 text-center text-slate-500 transition hover:border-brand-400 hover:text-brand-600">
+          <Plus className="h-6 w-6" />
+          <span className="mt-2 font-semibold">Boş anket</span>
+          <span className="text-sm">Sorularınızı kendiniz yazın</span>
+        </button>
       </div>
     </div>
   );
