@@ -26,6 +26,6 @@
 - [x] **Canlıya alma** — Supabase projesi `ankettt` (eu-west-1) bağlandı, migration uygulandı, site https://eelitajans34-ai.github.io/anket360/ adresinde
 - [ ] **Canlı doğrulama** — kayıt → e-posta doğrulama → kurum → anket → davet akışının canlı sitede elle denenmesi
 - [ ] **Özel SMTP** — Supabase ücretsiz planı saatte birkaç e-posta gönderir ve Türkçe şablonlara izin vermez; SMTP tanımlanınca iş akışı Türkçe şablonları otomatik uygular
-- [x] **Aşama 3** — Herkese açık anket sayfası (`/a/:id`), sunucu tarafı doğrulamalı yanıt kaydı (`get_public_survey` / `submit_response` RPC), bağlantı + QR + WhatsApp/e-posta paylaşımı, Yanıtlar sekmesi (67 test + 47 RLS kontrolü)
+- [x] **Aşama 3** — Herkese açık anket sayfası (`/a/:id`), sunucu tarafı doğrulamalı yanıt kaydı (`get_public_survey` / `submit_response` RPC), bağlantı + QR + WhatsApp/e-posta paylaşımı, Yanıtlar sekmesi (65 test + 47 RLS kontrolü)
 - [ ] Davet e-postası otomatik gönderimi — özel SMTP gerektirir
 - [ ] **Aşama 4** — Raporlar, grafikler, Excel/CSV dışa aktarma
