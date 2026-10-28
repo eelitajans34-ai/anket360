@@ -1,0 +1,70 @@
+# Canlı veritabanı kontrolü (elle çalıştırılır: Actions → Canlı kontrol → Run workflow)
+# Depo herkese açık olduğundan çıktılar maskelenir: IBAN'ın yalnız ilk/son 4 hanesi,
+# alıcı adının yalnız baş harfleri yazdırılır.
+name: Canlı kontrol
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kontrol:
+    name: Ödeme ve yönetim ayarları
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Canlı veritabanını sorgula
+        run: |
+          sorgu() {
+            curl -sS -X POST "https://api.supabase.com/v1/projects/$PROJECT_REF/database/query" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
+              -d "$(jq -n --arg q "$1" '{query: $q}')"
+          }
+          sorgu "select bank_name, account_holder, iban, note, updated_at from public.payment_settings" > odeme.json
+          sorgu "select id, name, price::text, period_days, max_active_surveys, active from public.plans order by sort" > paket.json
+          sorgu "select a.email, (u.id is not null) as kayitli, (u.email_confirmed_at is not null) as dogrulandi, coalesce(p.status, '-') as durum
+                 from public.platform_admins a left join auth.users u on lower(u.email) = a.email left join public.profiles p on p.id = u.id" > yonetici.json
+          sorgu "select count(*) filter (where status = 'beklemede') as bekleyen, count(*) as toplam from public.payments" > odemeler.json
+          sorgu "select count(*) as kurum from public.organizations" > kurum.json
+          python3 - <<'PY'
+          import json
+          def oku(f):
+              d = json.load(open(f))
+              if isinstance(d, dict) and d.get("message"):
+                  print(f"::error title=Sorgu hatası ({f})::{d['message']}"); raise SystemExit(1)
+              return d
+          def iban_gecerli(iban):
+              i = iban.replace(" ", "").upper()
+              if len(i) != 26 or not i.startswith("TR") or not i[2:].isdigit():
+                  return False, "biçim hatalı (TR + 24 rakam olmalı)"
+              r = i[4:] + i[:4]
+              n = int("".join(str(ord(c) - 55) if c.isalpha() else c for c in r))
+              return (n % 97 == 1), ("geçerli" if n % 97 == 1 else "sağlama hanesi tutmuyor")
+          def bas_harf(ad):
+              return " ".join(w[0] + "." for w in ad.split() if w) or "—"
+
+          o = (oku("odeme.json") or [{}])[0]
+          iban = (o.get("iban") or "").replace(" ", "")
+          if not iban:
+              print("::error title=IBAN girilmemiş::Yönetim → Ödeme Bilgileri boş görünüyor.")
+          else:
+              ok, neden = iban_gecerli(iban)
+              maske = f"{iban[:4]} **** **** **** **** {iban[-4:]}"
+              print(f"::{'notice' if ok else 'error'} title=IBAN {neden}::{maske} ({len(iban)} karakter)")
+          print(f"::notice title=Banka::{o.get('bank_name') or '— (boş)'}")
+          print(f"::{'notice' if o.get('account_holder') else 'error'} title=Alıcı::{bas_harf(o.get('account_holder') or '') if o.get('account_holder') else 'boş'} · {len(o.get('account_holder') or '')} karakter")
+          print(f"::notice title=Ödeme notu::{o.get('note') or '— (boş)'}")
+          print(f"::notice title=Son güncelleme::{o.get('updated_at')}")
+
+          for p in oku("paket.json"):
+              print(f"::notice title=Paket: {p['name']}::{p['price']} TL / {p['period_days']} gün · yayında anket sınırı: {p['max_active_surveys'] or 'sınırsız'} · {'satışta' if p['active'] else 'satışta değil'}")
+          for y in oku("yonetici.json"):
+              durum = "kayıtlı, e-posta doğrulanmış" if y["dogrulandi"] else ("kayıtlı ama e-posta doğrulanmamış (yetki verilmez)" if y["kayitli"] else "henüz kayıt olmamış")
+              print(f"::{'notice' if y['dogrulandi'] else 'warning'} title=Süper yönetici::{y['email'][:3]}***@{y['email'].split('@')[1]} — {durum} · hesap: {y['durum']}")
+          d = oku("odemeler.json")[0]; k = oku("kurum.json")[0]
+          print(f"::notice title=Kayıtlar::{k['kurum']} kurum · {d['toplam']} ödeme bildirimi ({d['bekleyen']} bekliyor)")
+          PY
