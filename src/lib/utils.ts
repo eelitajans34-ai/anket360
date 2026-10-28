@@ -1,5 +1,11 @@
 import { clsx, type ClassValue } from "clsx";
 
+/** Uygulamanın tam adresi (alt dizin dahil), ör. https://kullanici.github.io/anket360/panel */
+export function appUrl(path: string): string {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return `${window.location.origin}${base}${path}`;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }

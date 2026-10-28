@@ -75,7 +75,7 @@ export const routerFuture = {
   v7_skipActionErrorRevalidation: true,
 } as const;
 
-const router = createBrowserRouter(routes, { future: routerFuture });
+const router = createBrowserRouter(routes, { future: routerFuture, basename: import.meta.env.BASE_URL.replace(/\/$/, "") || "/" });
 
 export default function App() {
   return <RouterProvider router={router} future={{ v7_startTransition: true }} />;

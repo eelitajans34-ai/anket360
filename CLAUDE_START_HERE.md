@@ -15,12 +15,14 @@
 - `src/components/RouteGuards.tsx` — RequireAuth / RequireOrg / GuestOnly
 - `src/pages/` — sayfalar; `src/pages/panel/` yönetim paneli
 - `src/components/survey/` — soru düzenleyici, önizleme, şablonlar
-- `supabase/schema.sql` — Supabase şeması + RLS (kurulum: `docs/SUPABASE-KURULUM.md`)
+- `supabase/migrations/*.sql` — Supabase şeması + RLS; yeni değişiklik = yeni migration dosyası
+- `.github/workflows/yayin.yml` — test → Supabase migration/ayar → GitHub Pages yayını (kurulum: `docs/SUPABASE-KURULUM.md`)
 - `supabase/tests/rls-kontrol.mjs` — RLS kuralları için yerel PostgreSQL testi (`npm run test:rls`)
 
 ## Aşamalar
 - [x] **Aşama 1** — Proje kurulumu, Türkçe ana sayfa, giriş/kayıt/şifre sıfırlama, kurum oluşturma, yönetim paneli, anket oluşturucu, testler (21 test)
 - [x] **Aşama 2** — Supabase veri katmanı, şema + RLS, e-posta doğrulama, şifre sıfırlama/değiştirme, ekip daveti ve üye çıkarma (50 birim/arayüz testi + 24 RLS kontrolü)
-- [ ] **Aşama 2 doğrulama** — Gerçek Supabase projesinde uçtan uca deneme (proje bilgileri ve ağ erişimi bekleniyor)
+- [x] **Otomasyon** — GitHub Actions: testler, Supabase migration + kimlik doğrulama ayarları, GitHub Pages yayını
+- [ ] **Aşama 2 doğrulama** — Pages açılması ve 3 Supabase secret'ı bekleniyor; ardından canlı sitede uçtan uca deneme
 - [ ] **Aşama 3** — Herkese açık anket yanıtlama sayfası (`/a/:id`), yanıt kaydı, QR/bağlantı paylaşımı, davet e-postası gönderimi
 - [ ] **Aşama 4** — Raporlar, grafikler, Excel/CSV dışa aktarma

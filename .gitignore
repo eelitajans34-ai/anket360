@@ -4,3 +4,5 @@ dist
 .env.local
 *.log
 *.tsbuildinfo
+supabase/.temp
+supabase/.branches

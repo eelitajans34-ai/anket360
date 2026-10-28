@@ -1,37 +1,53 @@
-# Supabase kurulumu (Aşama 2)
+# Supabase ve yayın kurulumu (otomatik)
 
-Kod tarafı hazır: `src/lib/data/supabase-store.ts` tüm veri işlemlerini Supabase üzerinden yapar.
-Aşağıdaki adımlar Supabase panelinde **bir kez** yapılır.
+Kurulum GitHub Actions ile otomatik yapılır: `.github/workflows/yayin.yml`.
+`main` dalına her gönderimde sırasıyla:
 
-## 1. Proje
-1. https://supabase.com/dashboard → **New project** (bölge: Frankfurt `eu-central-1`, Türkiye'ye en yakın).
-2. **Project Settings → API** sayfasından `Project URL` ve `anon public` anahtarını alın.
-   `service_role` anahtarını **hiçbir yere** yazmayın; uygulama ona ihtiyaç duymaz.
+| Adım | Ne yapar |
+|---|---|
+| **Testler** | Tip denetimi, birim/arayüz testleri ve geçici PostgreSQL üzerinde RLS testleri |
+| **Supabase kurulumu** | `supabase/migrations/` içindeki yeni migration'ları uygular (`supabase db push`); site adresi, yönlendirme adresleri ve Türkçe e-posta şablonlarını ayarlar |
+| **GitHub Pages yayını** | anon anahtarını Supabase'den otomatik alır, tabloların erişilebilirliğini sınar, uygulamayı derleyip yayınlar |
 
-## 2. Veritabanı şeması
-**SQL Editor → New query** → `supabase/schema.sql` dosyasının tamamını yapıştırın → **Run**.
-Tablolar, tetikleyiciler, `create_organization` / `accept_invitation` fonksiyonları ve RLS kuralları oluşur.
+Supabase secret'ları tanımlı değilse Supabase adımı atlanır ve site **Demo modu**nda yayınlanır.
 
-## 3. Kimlik doğrulama ayarları
-**Authentication → URL Configuration**
-- *Site URL*: uygulamanın adresi (ör. `https://anket360.com.tr`, geliştirmede `http://localhost:5173`)
-- *Redirect URLs*: `<site>/panel` ve `<site>/sifre-yenile` (geliştirme için localhost karşılıkları da)
+## Bir kerelik ayarlar (yalnızca siz yapabilirsiniz)
 
-**Authentication → Providers → Email**
-- *Confirm email* açık kalabilir (önerilir): kayıttan sonra kullanıcıya doğrulama e-postası gider.
+### 1. GitHub Pages'i açın
+Depo → **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+Site adresi: `https://<kullanıcı>.github.io/anket360/`
 
-**Authentication → Email Templates** (isteğe bağlı): "Confirm signup" ve "Reset password" şablonlarını Türkçeleştirin.
-Supabase'in yerleşik e-posta servisi saatte birkaç e-postayla sınırlıdır; canlıya çıkmadan önce
-**Project Settings → Auth → SMTP** altından kendi SMTP sunucunuzu tanımlayın.
+### 2. Supabase projesi
+https://supabase.com/dashboard → **New project** (bölge önerisi: Frankfurt). Veritabanı şifresini not edin.
 
-## 4. Uygulamayı bağlama
-Proje kökünde `.env` dosyası (git'e eklenmez):
+### 3. Secret'ları ekleyin
+Depo → **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Ad | Nereden |
+|---|---|
+| `SUPABASE_ACCESS_TOKEN` | https://supabase.com/dashboard/account/tokens → *Generate new token* |
+| `SUPABASE_PROJECT_REF` | Proje adresi `https://<REF>.supabase.co` içindeki `<REF>` (Project Settings → General → Project ID) |
+| `SUPABASE_DB_PASSWORD` | Proje oluştururken belirlediğiniz veritabanı şifresi |
+
+### 4. Çalıştırın
+**Actions → Test ve Yayın → Run workflow** (ya da `main`'e yeni bir gönderim).
+
+## Notlar
+- Özel alan adı kullanılırsa **Settings → Secrets and variables → Actions → Variables** altına `SITE_URL` ekleyin (ör. `https://anket360.com.tr`).
+- Supabase'in yerleşik e-posta servisi saatte birkaç e-postayla sınırlıdır; canlı kullanım öncesi
+  **Project Settings → Auth → SMTP** ile kendi SMTP sunucunuzu tanımlayın.
+- Şema değişiklikleri yeni bir dosya olarak eklenir: `supabase/migrations/<YYYYMMDDHHMMSS>_aciklama.sql`.
+  Uygulanmış migration dosyaları değiştirilmez.
+- `service_role` anahtarı hiçbir yerde kullanılmaz.
+
+## Yerel geliştirme
+`.env` (git'e eklenmez):
 ```
 VITE_DATA_BACKEND=supabase
-VITE_SUPABASE_URL=https://PROJE-KODU.supabase.co
-VITE_SUPABASE_ANON_KEY=...
+VITE_SUPABASE_URL=https://<REF>.supabase.co
+VITE_SUPABASE_ANON_KEY=<Project Settings → API → anon public>
 ```
-`npm run dev` ile başlatın. Bu değişkenler yoksa uygulama "Demo modu"nda (tarayıcı içi veri) çalışır.
+Değişkenler yoksa uygulama Demo modunda (tarayıcı içi veri) çalışır.
 
 ## Yetki modeli (RLS)
 | İşlem | Sahip | Yönetici | Üye | Diğer |
@@ -43,9 +59,6 @@ VITE_SUPABASE_ANON_KEY=...
 | Anket oluşturma / düzenleme | ✓ | ✓ | ✓ | – |
 | Anket silme | ✓ | ✓ | – | – |
 
-Kurallar `npm run test:rls` ile **yerel, geçici** bir PostgreSQL üzerinde sınanır (bkz. `supabase/tests/rls-kontrol.mjs`).
-
 ## Ekip daveti
-Yönetici, Kurum sayfasından e-posta + rol girer; oluşan davet bağlantısı (`/davet/<kod>`) panoya kopyalanır
-ve kişiye iletilir. Kişi aynı e-posta adresiyle giriş yapıp/kayıt olup daveti kabul edince kuruma katılır.
-Davet e-postasının otomatik gönderimi Aşama 3'te (Edge Function + SMTP) eklenecek.
+Yönetici, Kurum sayfasından e-posta + rol girer; davet bağlantısı (`/davet/<kod>`) panoya kopyalanır ve kişiye iletilir.
+Kişi aynı e-postayla giriş yapıp/kayıt olup daveti kabul edince kuruma katılır.

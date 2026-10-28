@@ -6,10 +6,10 @@ import { ROLE_LABEL } from "@/lib/constants";
 import { db } from "@/lib/data";
 import type { Invitation } from "@/lib/types";
 import { useAsync } from "@/lib/use-async";
-import { initials, isValidEmail } from "@/lib/utils";
+import { appUrl, initials, isValidEmail } from "@/lib/utils";
 
 export function inviteLink(token: string) {
-  return `${window.location.origin}/davet/${token}`;
+  return appUrl(`/davet/${token}`);
 }
 
 export function TeamSection() {

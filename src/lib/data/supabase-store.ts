@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { ID, Invitation, OrganizationInput, SignUpInput, Survey, SurveyInput, User } from "@/lib/types";
-import { isValidEmail, passwordIssues, slugify } from "@/lib/utils";
+import { appUrl, isValidEmail, passwordIssues, slugify } from "@/lib/utils";
 import { validateOrg, validateSurvey } from "./local-store";
 import { DataError, type DataStore } from "./store";
 import {
@@ -16,7 +16,7 @@ import {
 export class SupabaseStore implements DataStore {
   private sb: SupabaseClient;
 
-  constructor(url: string, anonKey: string, private origin = typeof window !== "undefined" ? window.location.origin : "") {
+  constructor(url: string, anonKey: string, private link: (path: string) => string = appUrl) {
     this.sb = createClient(url, anonKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
@@ -35,7 +35,7 @@ export class SupabaseStore implements DataStore {
     const { data, error } = await this.sb.auth.signUp({
       email,
       password: input.password,
-      options: { data: { full_name: fullName }, emailRedirectTo: `${this.origin}/panel` },
+      options: { data: { full_name: fullName }, emailRedirectTo: this.link("/panel") },
     });
     if (error) throw toDataError(error, "Kayıt oluşturulamadı.");
     // E-posta doğrulaması açıksa ve adres zaten kayıtlıysa Supabase kimlik listesi boş bir kullanıcı döner.
@@ -69,7 +69,7 @@ export class SupabaseStore implements DataStore {
 
   async requestPasswordReset(email: string): Promise<void> {
     if (!isValidEmail(email)) throw new DataError("validation", "Geçerli bir e-posta adresi girin.");
-    const { error } = await this.sb.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${this.origin}/sifre-yenile` });
+    const { error } = await this.sb.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: this.link("/sifre-yenile") });
     if (error) throw toDataError(error, "Sıfırlama e-postası gönderilemedi.");
   }
 

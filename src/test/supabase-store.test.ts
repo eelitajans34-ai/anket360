@@ -49,7 +49,7 @@ describe("SupabaseStore (sahte istemci)", () => {
     calls.length = 0;
     nextResults = [];
     vi.clearAllMocks();
-    store = new SupabaseStore("https://x.supabase.co", "anon", "https://anket360.test");
+    store = new SupabaseStore("https://x.supabase.co", "anon", (p) => `https://anket360.test${p}`);
   });
 
   it("kayıtta e-posta doğrulaması gerekiyorsa null döner ve yönlendirme adresini verir", async () => {

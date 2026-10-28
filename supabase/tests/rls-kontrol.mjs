@@ -1,5 +1,5 @@
 /**
- * supabase/schema.sql için RLS / yetki kontrolü.
+ * supabase/migrations/*.sql için RLS / yetki kontrolü.
  * BOŞ, YEREL ve GEÇİCİ bir PostgreSQL veritabanında çalıştırın — betik public
  * ve auth şemalarını silip yeniden oluşturur. Asla Supabase projesine bağlamayın.
  *
@@ -13,16 +13,21 @@ if (!process.env.RLS_TEST_DATABASE_URL || /supabase\.(co|com)/.test(process.env.
 import fs from "node:fs";
 const client = new pg.Client({ connectionString: process.env.RLS_TEST_DATABASE_URL });
 await client.connect();
-await client.query("drop schema if exists public cascade; create schema public; drop schema if exists auth cascade; drop role if exists anon; drop role if exists authenticated;");
+await client.query("drop schema if exists public cascade; create schema public; drop schema if exists auth cascade; drop schema if exists extensions cascade;");
 const db = { exec: (sql) => client.query(sql), query: (sql, params) => client.query(sql, params) };
 // Supabase ortamının küçük taklidi: auth şeması, roller, auth.uid()
 await db.exec(`
   create schema auth;
   create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
-  create role anon; create role authenticated;
+  do $r$ begin create role anon; exception when duplicate_object then null; end $r$;
+  do $r$ begin create role authenticated; exception when duplicate_object then null; end $r$;
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 `);
-await db.exec(fs.readFileSync(new URL("../schema.sql", import.meta.url), "utf8"));
+// Tüm migration dosyalarını sırayla uygula
+const dir = new URL("../migrations/", import.meta.url);
+for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+  await db.exec(fs.readFileSync(new URL(f, dir), "utf8"));
+}
 await db.exec(`
   grant usage on schema public, auth to authenticated;
   grant select, insert, update, delete on all tables in schema public to authenticated;

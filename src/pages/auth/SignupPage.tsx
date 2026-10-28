@@ -84,7 +84,7 @@ export default function SignupPage() {
           <label className="flex items-start gap-2.5 text-sm text-slate-600">
             <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600" checked={form.kvkk} onChange={(e) => set("kvkk", e.target.checked)} />
             <span>
-              <a href="/#kvkk" className="font-medium text-brand-600 hover:underline">KVKK Aydınlatma Metni</a>'ni okudum, kişisel verilerimin işlenmesini kabul ediyorum.
+              <a href={`${import.meta.env.BASE_URL}#kvkk`} className="font-medium text-brand-600 hover:underline">KVKK Aydınlatma Metni</a>'ni okudum, kişisel verilerimin işlenmesini kabul ediyorum.
             </span>
           </label>
           {errors.kvkk && <p className="mt-1.5 text-xs text-red-600">{errors.kvkk}</p>}

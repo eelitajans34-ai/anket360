@@ -1,0 +1,2 @@
+# Supabase CLI proje ayarı. Uzak proje GitHub Actions'ta `supabase link` ile bağlanır.
+project_id = "anket360"

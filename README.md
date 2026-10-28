@@ -2,6 +2,10 @@
 
 Kurumlar için Türkçe anket ve geri bildirim platformu.
 
+[![Test ve Yayın](https://github.com/eelitajans34-ai/anket360/actions/workflows/yayin.yml/badge.svg)](https://github.com/eelitajans34-ai/anket360/actions/workflows/yayin.yml)
+
+Canlı adres (GitHub Pages): https://eelitajans34-ai.github.io/anket360/
+
 ## Teknolojiler
 React 18 · TypeScript · Vite 6 · Tailwind CSS 3 · React Router 6 · Vitest + Testing Library
 
@@ -29,6 +33,7 @@ npm run build      # tip denetimi + üretim derlemesi
 | `/davet/:kod` | Ekip davetini kabul etme |
 
 ## Veri katmanı
-- `.env` içinde Supabase bilgileri varsa veriler **Supabase**'te tutulur — kurulum: [docs/SUPABASE-KURULUM.md](docs/SUPABASE-KURULUM.md).
+- `.env` içinde Supabase bilgileri varsa veriler **Supabase**'te tutulur.
+- Supabase şeması ve GitHub Pages yayını **GitHub Actions ile otomatik** kurulur — bkz. [docs/SUPABASE-KURULUM.md](docs/SUPABASE-KURULUM.md).
 - Yoksa uygulama **Demo modu**nda çalışır; veriler yalnızca tarayıcıda (localStorage) saklanır.
 Ekran görüntüleri: `docs/ekran-goruntuleri/`.
