@@ -88,13 +88,47 @@ jobs:
         with:
           version: 2.20.12
 
+      - name: Secret'ların doğruluğunu denetle
+        if: steps.ayar.outputs.hazir == 'true'
+        run: |
+          if ! [[ "$PROJECT_REF" =~ ^[a-z0-9]{15,30}$ ]]; then
+            echo "::error title=SUPABASE_PROJECT_REF hatalı::Yalnızca proje kodu olmalı (ör. abcdefghijklmnopqrst). Adres, boşluk veya büyük harf içermemeli. Uzunluk: ${#PROJECT_REF}"
+            exit 1
+          fi
+          if ! [[ "$SUPABASE_ACCESS_TOKEN" =~ ^sbp_ ]]; then
+            echo "::error title=SUPABASE_ACCESS_TOKEN hatalı::Erişim anahtarı sbp_ ile başlamalı (supabase.com/dashboard/account/tokens). Proje anahtarı (anon/service_role) değil."
+            exit 1
+          fi
+          code=$(curl -sS -o /tmp/proje.json -w '%{http_code}' "https://api.supabase.com/v1/projects/$PROJECT_REF" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")
+          case "$code" in
+            200) echo "::notice title=Supabase projesi bulundu::$(jq -r '"\(.name) — \(.region) — durum: \(.status)"' /tmp/proje.json)" ;;
+            401) echo "::error title=Erişim anahtarı geçersiz::SUPABASE_ACCESS_TOKEN geçersiz veya süresi dolmuş. Yeni anahtar oluşturup secret'ı güncelleyin."; exit 1 ;;
+            403|404) echo "::error title=Proje bulunamadı::SUPABASE_PROJECT_REF ile eşleşen proje yok veya bu anahtarın sahibine ait değil (HTTP $code)."; exit 1 ;;
+            *) echo "::error title=Supabase API hatası::HTTP $code"; exit 1 ;;
+          esac
+
       - name: Projeye bağlan
         if: steps.ayar.outputs.hazir == 'true'
-        run: supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+        run: |
+          if ! supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" > /tmp/link.log 2>&1; then
+            cat /tmp/link.log
+            msg=$(grep -iE "error|failed|password" /tmp/link.log | tail -3 | tr '\n' ' ' | sed "s/$SUPABASE_DB_PASSWORD/***/g")
+            echo "::error title=Projeye bağlanılamadı::$msg"
+            exit 1
+          fi
+          cat /tmp/link.log
 
       - name: Migration'ları uygula
         if: steps.ayar.outputs.hazir == 'true'
-        run: echo y | supabase db push --password "$SUPABASE_DB_PASSWORD"
+        run: |
+          if ! (echo y | supabase db push --password "$SUPABASE_DB_PASSWORD") > /tmp/push.log 2>&1; then
+            cat /tmp/push.log
+            msg=$(grep -iE "error|failed" /tmp/push.log | tail -3 | tr '\n' ' ' | sed "s/$SUPABASE_DB_PASSWORD/***/g")
+            echo "::error title=Migration uygulanamadı::$msg"
+            exit 1
+          fi
+          cat /tmp/push.log
 
       - name: Kimlik doğrulama ayarları (adresler, Türkçe e-postalar)
         if: steps.ayar.outputs.hazir == 'true'
