@@ -41,5 +41,5 @@ Sade, herkesin anlayacağı anket uygulaması. Yeni ankette önce alan seçilir 
 - [x] **PDF rapor** — `src/lib/pdf-report.ts` (jsPDF + gömülü DejaVu Sans, vektör grafikler, sayfa numarası); jsPDF ve yazı tipleri yalnızca PDF indirilirken yüklenir
 - [x] **E-posta altyapısı (kod)** — Resend: Supabase Auth SMTP + `davet-e-postasi` Edge Function (RLS ile yönetici kontrolü, 60 sn sınırı, bağlantı sunucuda üretilir); `RESEND_API_KEY` + `MAIL_FROM` secret'ları eklenince iş akışı otomatik kurar
 - [ ] Resend hesabı + alan adı doğrulaması + iki secret (kullanıcı)
-- [x] **Yönetim ve abonelik** — süper yönetici paneli, paket/IBAN yönetimi, ödeme bildirimi/onayı, hesap dondurma/silme, Anketler sayfası, ana sayfa yenilemesi, genel eğilim göstergesi (151 test, 111 RLS kontrolü)
+- [x] **Yönetim ve abonelik** — süper yönetici paneli, paket/IBAN yönetimi, ödeme bildirimi/onayı, hesap dondurma/silme, Anketler sayfası, ana sayfa yenilemesi, genel eğilim göstergesi (146 test, 111 RLS kontrolü)
 - [x] **Aşama 4** — Rapor sekmesi: tarih filtresi, özet (yanıt, günlük ortalama, son yanıt, NPS), günlük yanıt grafiği, soru bazında grafikler (seçenek dağılımı, puan ortalaması, NPS kırılımı, metin yanıtları); Excel (.xlsx) ve CSV dışa aktarma; 1000+ yanıt için sayfalı çekme (80 test)
