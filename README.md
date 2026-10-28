@@ -26,7 +26,7 @@ npm run build      # tip denetimi + üretim derlemesi
 | `/kurum/olustur` | Kurum oluşturma |
 | `/panel` | Yönetim paneli — genel bakış |
 | `/panel/anketler` | Anket listesi (arama, filtre, kopyalama, silme) |
-| `/panel/anketler/yeni` · `/panel/anketler/:id/duzenle` | Anket oluşturucu (şablonlar, 9 soru tipi, önizleme, ayarlar) |
+| `/panel/anketler/yeni` · `/panel/anketler/:id/duzenle` | Anket oluşturucu (şablonlar, 9 soru tipi, önizleme, ayarlar), Rapor ve Yanıtlar sekmeleri, Excel/CSV dışa aktarma |
 | `/panel/kurum` | Kurum bilgileri, ekip, davetler |
 | `/panel/profil` | Profil ve şifre değiştirme |
 | `/sifre-yenile` | Şifre sıfırlama e-postasındaki bağlantının açtığı sayfa |

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Eye, Inbox, LayoutTemplate, ListChecks, Plus, Save, Send, Settings2, Share2 } from "lucide-react";
+import { ArrowLeft, BarChart3, Eye, Inbox, LayoutTemplate, ListChecks, Plus, Save, Send, Settings2, Share2 } from "lucide-react";
 import { QuestionEditor } from "@/components/survey/QuestionEditor";
 import { SurveyPreview } from "@/components/survey/SurveyPreview";
 import { ShareDialog } from "@/components/survey/ShareDialog";
 import { ResponsesTable } from "@/components/survey/ResponsesTable";
+import { ReportView } from "@/components/report/ReportView";
 import { DEFAULT_SETTINGS, TEMPLATES, newQuestion } from "@/components/survey/templates";
 import { StatusBadge } from "@/components/ui/Badge";
 import { Alert, Toggle } from "@/components/ui/Field";
@@ -15,7 +16,7 @@ import { db } from "@/lib/data";
 import type { Question, QuestionType, SurveyInput, SurveyStatus } from "@/lib/types";
 import { cn, uid } from "@/lib/utils";
 
-type Tab = "sorular" | "onizleme" | "yanitlar" | "ayarlar";
+type Tab = "sorular" | "onizleme" | "rapor" | "yanitlar" | "ayarlar";
 
 export default function SurveyBuilderPage() {
   const { id } = useParams();
@@ -31,6 +32,11 @@ export default function SurveyBuilderPage() {
   const [tab, setTab] = useState<Tab>("sorular");
   // Yeni anket "Yayınla" ile kaydedildiyse paylaşım penceresini hemen aç
   const [sharing, setSharing] = useState(() => (location.state as { saved?: SurveyStatus } | null)?.saved === "yayinda");
+
+  // Kayıt sonrası yönlendirme bilgisi (mesaj/paylaşım) bir kez kullanılır; sayfa yenilenince tekrar gösterilmesin
+  useEffect(() => {
+    if ((location.state as { saved?: SurveyStatus } | null)?.saved) navigate(location.pathname, { replace: true, state: null });
+  }, [location.state, location.pathname, navigate]);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(() =>
     (location.state as { saved?: SurveyStatus } | null)?.saved === "yayinda"
@@ -135,9 +141,9 @@ export default function SurveyBuilderPage() {
 
       {msg && <div className="mb-4"><Alert kind={msg.kind}>{msg.text}</Alert></div>}
 
-      <div className="mb-6 flex gap-1 border-b border-slate-200" role="tablist">
-        {([["sorular", "Sorular", ListChecks], ["onizleme", "Önizleme", Eye], ...(isNew ? [] : [["yanitlar", "Yanıtlar", Inbox] as const]), ["ayarlar", "Ayarlar", Settings2]] as const).map(([k, label, Icon]) => (
-          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn("-mb-px flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium", tab === k ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-800")}>
+      <div className="mb-6 flex gap-1 overflow-x-auto border-b border-slate-200" role="tablist">
+        {([["sorular", "Sorular", ListChecks], ["onizleme", "Önizleme", Eye], ...(isNew ? [] : [["rapor", "Rapor", BarChart3] as const, ["yanitlar", "Yanıtlar", Inbox] as const]), ["ayarlar", "Ayarlar", Settings2]] as const).map(([k, label, Icon]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className={cn("-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium", tab === k ? "border-brand-600 text-brand-700" : "border-transparent text-slate-500 hover:text-slate-800")}>
             <Icon className="h-4 w-4" />{label}
             {k === "sorular" && <span className="rounded-full bg-slate-100 px-1.5 text-xs text-slate-600">{draft.questions.length}</span>}
           </button>
@@ -186,6 +192,7 @@ export default function SurveyBuilderPage() {
         </div>
       )}
 
+      {tab === "rapor" && id && <ReportView surveyId={id} title={draft.title} questions={draft.questions} />}
       {tab === "yanitlar" && id && <ResponsesTable surveyId={id} questions={draft.questions} />}
 
       {sharing && id && <ShareDialog surveyId={id} title={draft.title} onClose={() => setSharing(false)} />}

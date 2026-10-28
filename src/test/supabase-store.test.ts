@@ -22,7 +22,7 @@ const auth = {
 function builder(entry: (typeof calls)[number]) {
   const result = () => nextResults.shift() ?? { data: null, error: null };
   const b: Record<string, unknown> = {};
-  for (const m of ["select", "insert", "update", "delete", "eq", "is", "order", "returns"]) {
+  for (const m of ["select", "insert", "update", "delete", "eq", "is", "order", "range", "returns"]) {
     b[m] = (...args: unknown[]) => { entry.ops.push([m, args]); return b; };
   }
   for (const m of ["single", "maybeSingle"]) {
@@ -136,5 +136,17 @@ describe("SupabaseStore (sahte istemci)", () => {
 
     nextResults = [{ data: { id: "s1", status: "kapali", title: "T" }, error: null }];
     await expect(store.submitResponse("s1", { q1: "Ali" })).rejects.toThrow("yanıt kabul etmiyor");
+  });
+
+  it("1000'den fazla yanıtı sayfa sayfa çeker", async () => {
+    const row = (i: number) => ({ id: `r${i}`, survey_id: "s1", answers: {}, created_at: "t" });
+    nextResults = [
+      { data: Array.from({ length: 1000 }, (_, i) => row(i)), error: null },
+      { data: Array.from({ length: 1000 }, (_, i) => row(1000 + i)), error: null },
+      { data: [row(2000), row(2001)], error: null },
+    ];
+    const rs = await store.listResponses("s1");
+    expect(rs).toHaveLength(2002);
+    expect(calls.map((c) => c.ops.find(([m]) => m === "range")![1])).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
   });
 });

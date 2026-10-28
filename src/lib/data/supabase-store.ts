@@ -300,9 +300,23 @@ export class SupabaseStore implements DataStore {
     }
   }
 
+  /** Tüm yanıtlar; PostgREST'in satır sınırı (varsayılan 1000) nedeniyle sayfa sayfa çekilir. */
   async listResponses(surveyId: ID) {
-    const { data, error } = await this.sb.from("responses").select("*").eq("survey_id", surveyId).order("created_at", { ascending: false }).returns<ResponseRow[]>();
-    if (error) throw toDataError(error);
-    return data.map(toResponse);
+    const page = 1000;
+    const rows: ResponseRow[] = [];
+    for (let from = 0; ; from += page) {
+      const { data, error } = await this.sb
+        .from("responses")
+        .select("*")
+        .eq("survey_id", surveyId)
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(from, from + page - 1)
+        .returns<ResponseRow[]>();
+      if (error) throw toDataError(error);
+      rows.push(...data);
+      if (data.length < page) break;
+    }
+    return rows.map(toResponse);
   }
 }

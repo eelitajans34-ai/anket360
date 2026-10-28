@@ -118,6 +118,8 @@ describe("Uygulama akışları", () => {
     await user.click(screen.getByRole("button", { name: "Yayınla" }));
     await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/panel\/anketler\/.+\/duzenle$/));
     await screen.findByText("Tüm değişiklikler kaydedildi");
+    // Yönlendirme durumu kullanıldıktan sonra temizlenir (sayfa yenilenince paylaşım penceresi yeniden açılmaz)
+    await waitFor(() => expect(router.state.location.state).toBeNull());
     expect(screen.getAllByText("Yayında").length).toBeGreaterThan(0);
 
     const id = router.state.location.pathname.split("/")[3]!;
