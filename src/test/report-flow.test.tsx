@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { routerFuture, routes } from "@/App";
@@ -85,6 +85,8 @@ describe("Rapor sekmesi", () => {
     HTMLAnchorElement.prototype.click = function () { clicks.push(this.download); };
     await user.click(screen.getByRole("button", { name: "CSV" }));
     await user.click(screen.getByRole("button", { name: "Excel" }));
+    // Excel paketi ihtiyaç anında yüklendiği için indirmeyi bekle
+    await waitFor(() => expect(clicks).toHaveLength(2));
     HTMLAnchorElement.prototype.click = orig;
     expect(clicks[0]).toMatch(/^Musteri-Anketi-yanitlar-.*\.csv$/);
     expect(clicks[1]).toMatch(/\.xlsx$/);

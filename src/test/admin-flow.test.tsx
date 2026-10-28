@@ -53,19 +53,26 @@ describe("Süper yönetici ve abonelik akışı", () => {
     expect(await screen.findByText(/Ödeme bilgileri kaydedildi/)).toBeInTheDocument();
     r1.view.unmount();
 
-    // Kurum ödeme bildirir
+    // Kurum ödeme sayfasından bildirir (FAST)
     await st.signOut();
     await st.signIn("ayse@belediye.gov.tr", "sifre1234");
     const r2 = renderAt("/panel/abonelik");
     expect(await screen.findByRole("region", { name: "Mevcut paket" })).toHaveTextContent("Başlangıç");
-    await user.click((await screen.findAllByRole("button", { name: /Bu pakete geç/ }))[0]!);
-    const dlg = screen.getByRole("dialog");
-    expect(dlg).toHaveTextContent("Profesyonel — ₺650");
-    expect(dlg).toHaveTextContent("TR33 0006 1005 1978 6457 8413 26");
-    await user.type(within(dlg).getByPlaceholderText(/gönderen ad soyad/), "Ayşe Demir 28.10");
-    await user.click(within(dlg).getByRole("button", { name: "Ödemeyi yaptım" }));
-    expect(await screen.findByText(/Ödeme bildiriminiz alındı/)).toBeInTheDocument();
-    expect(screen.getByText("Onay bekliyor")).toBeInTheDocument();
+    await user.click((await screen.findAllByRole("link", { name: /Bu pakete geç/ }))[0]!);
+    expect(r2.router.state.location.pathname).toBe("/panel/odeme/profesyonel");
+    const ozet = await screen.findByRole("complementary", { name: "Sipariş özeti" });
+    expect(ozet).toHaveTextContent("Profesyonel");
+    expect(ozet).toHaveTextContent("₺650");
+    expect(screen.getByRole("radio", { name: /Kredi \/ Banka kartı/ })).toBeDisabled();
+    await user.click(screen.getByRole("radio", { name: /FAST/ }));
+    expect(screen.getByRole("heading", { name: "2. FAST ile ödeme" })).toBeInTheDocument();
+    expect(screen.getByText("TR33 0006 1005 1978 6457 8413 26")).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText(/gönderen ad soyad/), "Ayşe Demir 28.10");
+    await user.click(screen.getByRole("button", { name: "Ödemeyi yaptım" }));
+    expect(await screen.findByRole("heading", { name: "Ödeme bildiriminiz alındı" })).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: "Abonelik sayfasına dön" }));
+    expect(await screen.findByText("Onay bekliyor")).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "FAST" })).toBeInTheDocument();
     r2.view.unmount();
 
     // Süper yönetici onaylar ve kurumu yönetir
@@ -82,7 +89,7 @@ describe("Süper yönetici ve abonelik akışı", () => {
     expect(await screen.findByText("Örnek Belediyesi: Donduruldu")).toBeInTheDocument();
     const org = (await st.adminListOrganizations())[0]!;
     expect(org).toMatchObject({ status: "donduruldu", planId: "profesyonel" });
-    expect((await st.listPayments(org.id))[0]).toMatchObject({ status: "onaylandi", amount: 650 });
+    expect((await st.listPayments(org.id))[0]).toMatchObject({ status: "onaylandi", amount: 650, method: "fast" });
     expect(u.id).toBeTruthy();
   });
 
@@ -143,5 +150,30 @@ describe("Süper yönetici ve abonelik akışı", () => {
     renderAt(`/panel/anketler/${s.id}/duzenle`);
     expect(await screen.findByText(/Genel eğilim/)).toBeInTheDocument();
     expect(screen.getByText(/Genel eğilim/).parentElement).toHaveTextContent('12 yanıt: %75 "Trafik ve ulaşım" dedi · %25 "Altyapı ve yollar" dedi');
+  });
+});
+
+describe("Fiyatlardan ödemeye", () => {
+  it("giriş yapmamış ziyaretçi 'Hemen başla' → kayıt → kurum → ödeme sayfasına gelir", async () => {
+    const user = userEvent.setup();
+    const { router } = renderAt("/");
+    const pro = (await screen.findAllByRole("link", { name: "Hemen başla" }))[0]!;
+    await user.click(pro);
+    expect(router.state.location.pathname).toBe("/kayit");
+    expect(await screen.findByText(/Profesyonel/, { selector: "strong" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Ad Soyad"), "Can Yıldız");
+    await user.type(screen.getByLabelText("İş e-postası"), "can@ornek.com");
+    await user.type(screen.getByLabelText("Şifre"), "guvenli123");
+    await user.type(screen.getByLabelText("Şifre (tekrar)"), "guvenli123");
+    await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Hesap oluştur" }));
+    await screen.findByRole("heading", { name: "Kurumunuzu oluşturun" });
+    await user.type(screen.getByLabelText(/Kurum adı/), "Yıldız Ltd");
+    await user.selectOptions(screen.getByLabelText(/Sektör/), "Perakende");
+    await user.selectOptions(screen.getByLabelText(/Çalışan sayısı/), "1–10");
+    await user.type(screen.getByLabelText(/Şehir/), "İzmir");
+    await user.click(screen.getByRole("button", { name: /Kurumu oluştur/ }));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/panel/odeme/profesyonel"));
+    expect(await screen.findByRole("heading", { name: "Ödeme" })).toBeInTheDocument();
   });
 });

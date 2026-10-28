@@ -6,6 +6,7 @@ import { Alert, TextField } from "@/components/ui/Field";
 import { PasswordField, PasswordStrength } from "@/components/ui/PasswordField";
 import { useAuth } from "@/lib/auth";
 import { isValidEmail, passwordIssues, safeRedirect } from "@/lib/utils";
+import { DEFAULT_PLANS } from "@/lib/platform";
 
 type Errors = Partial<Record<"fullName" | "email" | "password" | "confirm" | "kvkk", string>>;
 
@@ -15,6 +16,8 @@ export default function SignupPage() {
   const location = useLocation();
   const from = safeRedirect((location.state as { from?: string } | null)?.from, "/kurum/olustur");
   const [confirmSentTo, setConfirmSentTo] = useState<string | null>(null);
+  const planMatch = /^\/panel\/odeme\/([a-z0-9-]+)$/.exec(from);
+  const selectedPlan = planMatch ? (DEFAULT_PLANS.find((p) => p.id === planMatch[1])?.name ?? planMatch[1]) : null;
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirm: "", kvkk: false });
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -73,6 +76,7 @@ export default function SignupPage() {
       footer={<>Zaten hesabınız var mı? <Link to="/giris" state={location.state} className="font-semibold text-brand-600 hover:underline">Giriş yapın</Link></>}
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
+        {selectedPlan && <Alert kind="info">Kayıt ve kurum bilgilerinden sonra <strong>{selectedPlan}</strong> paketi için ödeme sayfasına yönlendirileceksiniz.</Alert>}
         {formError && <Alert>{formError}</Alert>}
         <TextField label="Ad Soyad" autoComplete="name" value={form.fullName} onChange={(e) => set("fullName", e.target.value)} error={errors.fullName} />
         <TextField label="İş e-postası" type="email" autoComplete="email" value={form.email} onChange={(e) => set("email", e.target.value)} error={errors.email} placeholder="ornek@kurum.com.tr" />

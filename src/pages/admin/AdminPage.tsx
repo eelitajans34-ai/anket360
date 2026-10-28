@@ -10,6 +10,7 @@ import { db } from "@/lib/data";
 import { ORG_STATUS_LABEL, ORG_STATUS_STYLE, formatIban, formatTL, isExpired, isValidIban } from "@/lib/platform";
 import type { AccountStatus, AdminOrganization, AdminUser, OrgStatus, Payment, PaymentSettings, Plan } from "@/lib/types";
 import { useAsync } from "@/lib/use-async";
+import { methodLabel } from "@/lib/payments/methods";
 import { cn, formatDate } from "@/lib/utils";
 
 type Tab = "ozet" | "kurumlar" | "kullanicilar" | "odemeler" | "paketler" | "banka";
@@ -316,7 +317,7 @@ function Payments({ payments, orgs, plans, onDecide }: { payments: Payment[]; or
       {sorted.length === 0 ? <p className="p-6 text-center text-sm text-slate-500">Henüz ödeme bildirimi yok.</p> : (
         <table className="min-w-full divide-y divide-slate-100 text-sm">
           <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
-            <tr><th className="px-4 py-2.5">Tarih</th><th className="px-4 py-2.5">Kurum</th><th className="px-4 py-2.5">Paket</th><th className="px-4 py-2.5">Tutar</th><th className="px-4 py-2.5">Kod / not</th><th className="px-4 py-2.5 text-right">Durum</th></tr>
+            <tr><th className="px-4 py-2.5">Tarih</th><th className="px-4 py-2.5">Kurum</th><th className="px-4 py-2.5">Paket</th><th className="px-4 py-2.5">Yöntem</th><th className="px-4 py-2.5">Tutar</th><th className="px-4 py-2.5">Kod / not</th><th className="px-4 py-2.5 text-right">Durum</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {sorted.map((p) => (
@@ -324,6 +325,7 @@ function Payments({ payments, orgs, plans, onDecide }: { payments: Payment[]; or
                 <td className="whitespace-nowrap px-4 py-2.5 text-xs">{new Date(p.createdAt).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</td>
                 <td className="px-4 py-2.5">{orgs.find((o) => o.id === p.orgId)?.name ?? "—"}</td>
                 <td className="px-4 py-2.5">{plans.find((x) => x.id === p.planId)?.name ?? p.planId}</td>
+                <td className="px-4 py-2.5">{methodLabel(p.method)}</td>
                 <td className="whitespace-nowrap px-4 py-2.5 font-medium">{formatTL(p.amount)}</td>
                 <td className="px-4 py-2.5"><span className="font-mono">{p.reference}</span>{p.note && <p className="text-xs text-slate-500">{p.note}</p>}</td>
                 <td className="px-4 py-2.5 text-right">

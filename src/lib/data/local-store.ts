@@ -24,6 +24,7 @@ import { isValidEmail, passwordIssues, slugify, uid } from "@/lib/utils";
 import { cleanAnswers, isPastEndDate, missingRequired } from "@/lib/answers";
 import { conditionError } from "@/lib/conditions";
 import { DEFAULT_PLANS, SUPER_ADMIN_EMAILS, orgUsable } from "@/lib/platform";
+import { isBankMethod, type PaymentMethodId } from "@/lib/payments/methods";
 import { DataError, type DataStore } from "./store";
 
 /**
@@ -106,6 +107,7 @@ export class LocalStore implements DataStore {
       if (parsed.version !== 1) return emptyDB();
       const db = { ...emptyDB(), ...parsed };
       db.organizations = db.organizations.map(normalizeOrg);
+      db.payments = db.payments.map((p) => ({ ...p, method: p.method ?? "havale" }));
       return db;
     } catch {
       return emptyDB();
@@ -514,7 +516,8 @@ export class LocalStore implements DataStore {
     return { ...this.read().paymentSettings };
   }
 
-  async createPayment(orgId: ID, planId: string, note: string): Promise<Payment> {
+  async createPayment(orgId: ID, planId: string, note: string, method: PaymentMethodId = "havale"): Promise<Payment> {
+    if (!isBankMethod(method)) throw new DataError("validation", "Bu ödeme yöntemi henüz kullanılamıyor.");
     return this.mutate((db) => {
       const u = this.sessionUser(db);
       const m = db.memberships.find((x) => x.orgId === orgId && x.userId === u.id);
@@ -524,7 +527,7 @@ export class LocalStore implements DataStore {
       if (plan.price === 0) throw new DataError("validation", "Ücretsiz paket için ödeme bildirimi gerekmez.");
       const pay: Payment = {
         id: uid(), orgId, planId, amount: plan.price, reference: uid().replace(/-/g, "").slice(0, 8).toUpperCase(),
-        status: "beklemede", note: note.trim(), adminNote: "", createdBy: u.id, createdAt: now(),
+        status: "beklemede", method, note: note.trim(), adminNote: "", createdBy: u.id, createdAt: now(),
       };
       db.payments.push(pay);
       return pay;

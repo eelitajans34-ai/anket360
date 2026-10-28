@@ -3,6 +3,7 @@ import { AuthProvider } from "@/lib/auth";
 import { lazy, Suspense } from "react";
 import { FullPageSpinner, GuestOnly, RequireAuth, RequireOrg, RequireSuperAdmin } from "@/components/RouteGuards";
 import SubscriptionPage from "@/pages/panel/SubscriptionPage";
+import PaymentPage from "@/pages/panel/PaymentPage";
 import PublicSurveysPage from "@/pages/PublicSurveysPage";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/auth/LoginPage";
@@ -77,6 +78,7 @@ export const routes: RouteObject[] = [
                   { path: "anketler/:id/duzenle", element: <Builder /> },
                   { path: "kurum", element: <OrgSettingsPage /> },
                   { path: "abonelik", element: <SubscriptionPage /> },
+                  { path: "odeme/:planId", element: <PaymentPage /> },
                   { path: "profil", element: <ProfilePage /> },
                 ],
               },

@@ -36,7 +36,8 @@ export function RequireOrg() {
   if (organizations.length === 0) {
     // Kurumu olmayan süper yönetici başka kurumların anketlerini düzenleyebilir
     if (user?.isSuperAdmin && /^\/panel\/anketler\/[^/]+\/duzenle$/.test(location.pathname)) return <Outlet />;
-    return <Navigate to={user?.isSuperAdmin ? "/yonetim" : "/kurum/olustur"} replace />;
+    // Hedef sayfa (ör. ödeme) kurum oluşturulduktan sonra açılsın
+    return <Navigate to={user?.isSuperAdmin ? "/yonetim" : "/kurum/olustur"} replace state={{ from: location.pathname }} />;
   }
   return <Outlet />;
 }

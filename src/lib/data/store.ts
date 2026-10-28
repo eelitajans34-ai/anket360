@@ -21,6 +21,7 @@ import type {
   SurveyResponse,
   User,
 } from "@/lib/types";
+import type { PaymentMethodId } from "@/lib/payments/methods";
 
 /**
  * Uygulamanın veri katmanı sözleşmesi. İki uygulaması vardır:
@@ -77,7 +78,7 @@ export interface DataStore {
   // Abonelik ve ödeme
   listPlans(): Promise<Plan[]>;
   getPaymentSettings(): Promise<PaymentSettings>;
-  createPayment(orgId: ID, planId: string, note: string): Promise<Payment>;
+  createPayment(orgId: ID, planId: string, note: string, method?: PaymentMethodId): Promise<Payment>;
   listPayments(orgId?: ID): Promise<Payment[]>;
 
   /** Genel eğilim istatistiği (en az 10 yanıt yoksa insufficient) */

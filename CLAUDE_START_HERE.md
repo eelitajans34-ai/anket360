@@ -25,7 +25,7 @@ Sade, herkesin anlayacağı anket uygulaması. Yeni ankette önce alan seçilir 
 ## Süper yönetici ve abonelik
 - Süper yönetici: `platform_admins` tablosu (migration ile `mustafasubasinin@gmail.com`), e-postası doğrulanmış olmalı; demo modunda `src/lib/platform.ts` → `SUPER_ADMIN_EMAILS`. Panel: `/yonetim`.
 - Kurum: `plan_id`, `status` (aktif/pasif/donduruldu/engellendi), `ends_at`. Kullanılamayan kurum anket yayınlayamaz/düzenleyemez, anketleri yanıt almaz (SQL tetikleyicileri).
-- Ödeme: IBAN ile havale → `payments` (beklemede) → süper yönetici `admin_odeme_karar` ile onaylar → paket + süre.
+- Ödeme: fiyat kartı → `/panel/odeme/<paket>`; Havale / EFT / FAST (`payments.method`) → `beklemede` → süper yönetici `admin_odeme_karar` ile onaylar → paket + süre. Kart (PayTR) için: `docs/ODEME-YONTEMLERI.md`, `src/lib/payments/methods.ts`.
 - Hesap: `profiles.status`; `hesabimi_dondur / hesabimi_etkinlestir / hesabimi_sil`; KVKK onay zamanı `kvkk_onay_at`.
 - Genel eğilim: sorudaki `statKey` → `genel_istatistik` (yalnız toplam, en az 10 yanıt).
 

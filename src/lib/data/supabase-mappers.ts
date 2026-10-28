@@ -18,7 +18,7 @@ export interface PlanRow {
 }
 export interface PaymentRow {
   id: string; org_id: string; plan_id: string; amount: string | number; reference: string; status: Payment["status"];
-  note: string; admin_note: string; created_by: string | null; created_at: string; decided_at: string | null;
+  note: string; admin_note: string; created_by: string | null; created_at: string; decided_at: string | null; method?: string;
 }
 export interface PaymentSettingsRow { bank_name: string; account_holder: string; iban: string; note: string }
 export interface MembershipRow { org_id: string; user_id: string; role: OrgRole; created_at: string }
@@ -47,7 +47,7 @@ export const fromPlan = (p: Plan): Omit<PlanRow, "id"> => ({
   description: p.description, features: p.features, sort: p.sort, active: p.active,
 });
 export const toPayment = (r: PaymentRow): Payment => ({
-  id: r.id, orgId: r.org_id, planId: r.plan_id, amount: Number(r.amount), reference: r.reference, status: r.status,
+  id: r.id, orgId: r.org_id, planId: r.plan_id, amount: Number(r.amount), reference: r.reference, status: r.status, method: r.method ?? "havale",
   note: r.note, adminNote: r.admin_note, createdBy: r.created_by ?? undefined, createdAt: r.created_at, decidedAt: r.decided_at ?? undefined,
 });
 export const toPaymentSettings = (r: PaymentSettingsRow | null): PaymentSettings => ({

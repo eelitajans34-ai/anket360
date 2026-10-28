@@ -9,6 +9,7 @@ import { CATEGORIES } from "@/components/survey/categories";
 import { db } from "@/lib/data";
 import { DEFAULT_PLANS, formatTL } from "@/lib/platform";
 import { useAsync } from "@/lib/use-async";
+import { useAuth } from "@/lib/auth";
 
 const FEATURES = [
   { icon: LayoutTemplate, title: "Hazır anketler", text: "Belediye, siyasi parti, STK ve işletmeler için hazır sorularla dakikalar içinde başlayın." },
@@ -39,6 +40,7 @@ export default function HomePage() {
   // Fiyatlar veritabanından (süper yönetici değiştirebilir); yüklenemezse varsayılanlar
   const { data: plans } = useAsync(() => db.listPlans().then((p) => p.filter((x) => x.active)), []);
   const shownPlans = plans?.length ? plans : DEFAULT_PLANS;
+  const { user } = useAuth();
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <SiteHeader />
@@ -153,7 +155,14 @@ export default function HomePage() {
                       <li key={f} className="flex items-start gap-2 text-sm text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />{f}</li>
                     ))}
                   </ul>
-                  <Link to="/kayit" className={`mt-8 ${highlight ? "btn-primary" : "btn-secondary"}`}>{p.price === 0 ? "Ücretsiz başla" : "Hemen başla"}</Link>
+                  {/* Ücretli paket: ödeme sayfasına (giriş yoksa önce kayıt + kurum, sonra ödeme) */}
+                  <Link
+                    to={p.price === 0 ? (user ? "/panel" : "/kayit") : user ? `/panel/odeme/${p.id}` : "/kayit"}
+                    state={p.price === 0 || user ? undefined : { from: `/panel/odeme/${p.id}` }}
+                    className={`mt-8 ${highlight ? "btn-primary" : "btn-secondary"}`}
+                  >
+                    {p.price === 0 ? "Ücretsiz başla" : "Hemen başla"}
+                  </Link>
                 </div>
                 );
               })}

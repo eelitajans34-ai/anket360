@@ -68,6 +68,8 @@ export interface Payment {
   amount: number;
   reference: string;
   status: PaymentStatus;
+  /** havale | eft | fast (ileride kredi_karti vb.) */
+  method: string;
   note: string;
   adminNote: string;
   createdBy?: ID;

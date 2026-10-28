@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { AccountStatus, AdminOrganization, AdminUser, Answers, Benchmark, ID, Invitation, OrganizationInput, OrgRole, OrgStatus, Payment, PaymentSettings, Plan, PublicSurvey, SignUpInput, Survey, SurveyInput, User } from "@/lib/types";
 import { cleanAnswers } from "@/lib/answers";
+import { isBankMethod, type PaymentMethodId } from "@/lib/payments/methods";
 import { appUrl, isValidEmail, passwordIssues, slugify } from "@/lib/utils";
 import { validateOrg, validateSurvey } from "./local-store";
 import { DataError, type DataStore } from "./store";
@@ -372,8 +373,9 @@ export class SupabaseStore implements DataStore {
     return toPaymentSettings(data);
   }
 
-  async createPayment(orgId: ID, planId: string, note: string): Promise<Payment> {
-    const { data, error } = await this.sb.from("payments").insert({ org_id: orgId, plan_id: planId, note: note.trim() }).select().single<PaymentRow>();
+  async createPayment(orgId: ID, planId: string, note: string, method: PaymentMethodId = "havale"): Promise<Payment> {
+    if (!isBankMethod(method)) throw new DataError("validation", "Bu ödeme yöntemi henüz kullanılamıyor.");
+    const { data, error } = await this.sb.from("payments").insert({ org_id: orgId, plan_id: planId, note: note.trim(), method }).select().single<PaymentRow>();
     if (error) throw toDataError(error, "Ödeme bildirimi gönderilemedi.");
     return toPayment(data);
   }

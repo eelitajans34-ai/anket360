@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Building2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Alert, SelectField, TextField } from "@/components/ui/Field";
@@ -7,13 +7,14 @@ import { useAuth } from "@/lib/auth";
 import { CITIES, ORG_SIZES, SECTORS } from "@/lib/constants";
 import { db } from "@/lib/data";
 import type { OrganizationInput } from "@/lib/types";
-import { slugify } from "@/lib/utils";
+import { safeRedirect, slugify } from "@/lib/utils";
 
 type Errors = Partial<Record<keyof OrganizationInput, string>>;
 
 export default function CreateOrgPage() {
   const { user, organizations, refresh, setActiveOrg, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [form, setForm] = useState<OrganizationInput>({ name: "", sector: "", size: "", city: "", phone: "", website: "" });
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -43,7 +44,7 @@ export default function CreateOrgPage() {
       const org = await db.createOrganization(user.id, form);
       await refresh();
       setActiveOrg(org.id);
-      navigate("/panel", { replace: true });
+      navigate(safeRedirect((location.state as { from?: string } | null)?.from, "/panel"), { replace: true });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Kurum oluşturulamadı.");
     } finally {

@@ -200,6 +200,9 @@ ok("kullanıcılar IBAN bilgisini görür", (await as(D, `select iban from payme
 
 const odeme = (await as(D, `insert into payments (org_id, plan_id, amount, status, note) values ($1,'profesyonel', 1, 'onaylandi', 'havale yaptım') returning *`, [dOrg.id])).rows[0];
 ok("ödeme bildirimi tutarı paketten alır, durum 'beklemede' zorlanır", odeme.amount === "599.00" && odeme.status === "beklemede" && odeme.reference.length === 8 && odeme.created_by === D);
+const fastOdeme = (await as(D, `insert into payments (org_id, plan_id, method) values ($1,'kurumsal','fast') returning method`, [dOrg.id])).rows[0];
+ok("ödeme yöntemi kaydedilir (FAST)", fastOdeme.method === "fast");
+await expectFail("henüz desteklenmeyen ödeme yöntemi reddedilir", as(D, `insert into payments (org_id, plan_id, method) values ($1,'kurumsal','kredi_karti')`, [dOrg.id]));
 await expectFail("ücretsiz paket için ödeme bildirimi yapılamaz", as(D, `insert into payments (org_id, plan_id) values ($1,'baslangic')`, [dOrg.id]));
 await expectFail("başka kurum adına ödeme bildirimi yapılamaz", as(E, `insert into payments (org_id, plan_id) values ($1,'profesyonel')`, [dOrg.id]));
 ok("yabancı başka kurumun ödemelerini göremez", (await as(E, `select * from payments`)).rows.length === 0);
