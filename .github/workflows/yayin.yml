@@ -104,7 +104,16 @@ jobs:
           case "$code" in
             200) echo "::notice title=Supabase projesi bulundu::$(jq -r '"\(.name) — \(.region) — durum: \(.status)"' /tmp/proje.json)" ;;
             401) echo "::error title=Erişim anahtarı geçersiz::SUPABASE_ACCESS_TOKEN geçersiz veya süresi dolmuş. Yeni anahtar oluşturup secret'ı güncelleyin."; exit 1 ;;
-            403|404) echo "::error title=Proje bulunamadı::SUPABASE_PROJECT_REF ile eşleşen proje yok veya bu anahtarın sahibine ait değil (HTTP $code)."; exit 1 ;;
+            403|404)
+              echo "::error title=Proje bulunamadı::SUPABASE_PROJECT_REF ile eşleşen proje yok veya bu anahtarın sahibine ait değil (HTTP $code). Yanıt: $(head -c 300 /tmp/proje.json | tr '\n' ' ')"
+              lc=$(curl -sS -o /tmp/liste.json -w '%{http_code}' "https://api.supabase.com/v1/projects" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN")
+              if [ "$lc" = "200" ]; then
+                liste=$(jq -r 'if length == 0 then "hiç proje yok" else map("\(.name) [\(.id[0:4])…, \(.id | length) karakter]") | join(", ") end' /tmp/liste.json)
+                echo "::error title=Bu anahtarın gördüğü projeler::$liste — Girilen SUPABASE_PROJECT_REF: ${PROJECT_REF:0:4}…, ${#PROJECT_REF} karakter"
+              else
+                echo "::error title=Proje listesi alınamadı::HTTP $lc — $(head -c 300 /tmp/liste.json | tr '\n' ' ')"
+              fi
+              exit 1 ;;
             *) echo "::error title=Supabase API hatası::HTTP $code"; exit 1 ;;
           esac
 
