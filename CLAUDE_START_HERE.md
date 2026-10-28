@@ -22,6 +22,13 @@
 ## Ürün yönü (kullanıcı isteği)
 Sade, herkesin anlayacağı anket uygulaması. Yeni ankette önce alan seçilir (Belediye, Siyasi Parti, STK/Dernek, İşletme, Genel), sonra o alanın hazır anketi (`src/components/survey/categories.ts`). Kullanıcı açıkça istemeden yeni özellik/kapsam ekleme; önce sor.
 
+## Süper yönetici ve abonelik
+- Süper yönetici: `platform_admins` tablosu (migration ile `mustafasubasinin@gmail.com`), e-postası doğrulanmış olmalı; demo modunda `src/lib/platform.ts` → `SUPER_ADMIN_EMAILS`. Panel: `/yonetim`.
+- Kurum: `plan_id`, `status` (aktif/pasif/donduruldu/engellendi), `ends_at`. Kullanılamayan kurum anket yayınlayamaz/düzenleyemez, anketleri yanıt almaz (SQL tetikleyicileri).
+- Ödeme: IBAN ile havale → `payments` (beklemede) → süper yönetici `admin_odeme_karar` ile onaylar → paket + süre.
+- Hesap: `profiles.status`; `hesabimi_dondur / hesabimi_etkinlestir / hesabimi_sil`; KVKK onay zamanı `kvkk_onay_at`.
+- Genel eğilim: sorudaki `statKey` → `genel_istatistik` (yalnız toplam, en az 10 yanıt).
+
 ## Aşamalar
 - [x] **Aşama 1** — Proje kurulumu, Türkçe ana sayfa, giriş/kayıt/şifre sıfırlama, kurum oluşturma, yönetim paneli, anket oluşturucu, testler (21 test)
 - [x] **Aşama 2** — Supabase veri katmanı, şema + RLS, e-posta doğrulama, şifre sıfırlama/değiştirme, ekip daveti ve üye çıkarma (50 birim/arayüz testi + 24 RLS kontrolü)
@@ -34,4 +41,5 @@ Sade, herkesin anlayacağı anket uygulaması. Yeni ankette önce alan seçilir 
 - [x] **PDF rapor** — `src/lib/pdf-report.ts` (jsPDF + gömülü DejaVu Sans, vektör grafikler, sayfa numarası); jsPDF ve yazı tipleri yalnızca PDF indirilirken yüklenir
 - [x] **E-posta altyapısı (kod)** — Resend: Supabase Auth SMTP + `davet-e-postasi` Edge Function (RLS ile yönetici kontrolü, 60 sn sınırı, bağlantı sunucuda üretilir); `RESEND_API_KEY` + `MAIL_FROM` secret'ları eklenince iş akışı otomatik kurar
 - [ ] Resend hesabı + alan adı doğrulaması + iki secret (kullanıcı)
+- [x] **Yönetim ve abonelik** — süper yönetici paneli, paket/IBAN yönetimi, ödeme bildirimi/onayı, hesap dondurma/silme, Anketler sayfası, ana sayfa yenilemesi, genel eğilim göstergesi (151 test, 111 RLS kontrolü)
 - [x] **Aşama 4** — Rapor sekmesi: tarih filtresi, özet (yanıt, günlük ortalama, son yanıt, NPS), günlük yanıt grafiği, soru bazında grafikler (seçenek dağılımı, puan ortalaması, NPS kırılımı, metin yanıtları); Excel (.xlsx) ve CSV dışa aktarma; 1000+ yanıt için sayfalı çekme (80 test)

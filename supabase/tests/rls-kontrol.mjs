@@ -18,7 +18,7 @@ const db = { exec: (sql) => client.query(sql), query: (sql, params) => client.qu
 // Supabase ortamının küçük taklidi: auth şeması, roller, auth.uid()
 await db.exec(`
   create schema auth;
-  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
+  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}', email_confirmed_at timestamptz default now());
   do $r$ begin create role anon; exception when duplicate_object then null; end $r$;
   do $r$ begin create role authenticated; exception when duplicate_object then null; end $r$;
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
@@ -166,6 +166,99 @@ await expectFail("yönetici olmayan davet e-postası tetikleyemez", as(C, `selec
 await expectFail("ziyaretçi davet e-postası tetikleyemez", asAnon(`select mark_invitation_emailed($1)`, [inv2.id]));
 await expectFail("kabul edilmiş davet için e-posta gönderilemez", as(A, `select mark_invitation_emailed($1)`, [inv.id]));
 ok("yabancı emailed_at alanını göremez", (await as(C, `select emailed_at from invitations`)).rows.length === 0);
+
+// ---------------- Süper yönetici, abonelik, hesap durumu ----------------
+const SA = "00000000-0000-0000-0000-0000000000aa", D = "00000000-0000-0000-0000-00000000000d", E = "00000000-0000-0000-0000-00000000000e", F = "00000000-0000-0000-0000-00000000000f";
+await db.exec(`insert into auth.users (id, email, raw_user_meta_data, email_confirmed_at) values
+  ('${SA}', 'MustafaSubasinin@gmail.com', '{"full_name":"Mustafa","kvkk_onay":"true"}', null),
+  ('${D}', 'd@kurum.com', '{"full_name":"Dilek"}', now()), ('${E}', 'e@kurum.com', '{}', now()), ('${F}', 'f@kurum.com', '{}', now());`);
+ok("KVKK onay zamanı kayıtta saklanır", (await db.query(`select kvkk_onay_at from profiles where id='${SA}'`)).rows[0].kvkk_onay_at !== null);
+ok("e-postası doğrulanmamış süper yönetici adresi yetki almaz", (await as(SA, `select is_super_admin() v`)).rows[0].v === false);
+await db.query(`update auth.users set email_confirmed_at = now() where id='${SA}'`);
+ok("doğrulanmış süper yönetici tanınır", (await as(SA, `select is_super_admin() v`)).rows[0].v === true);
+ok("normal kullanıcı süper yönetici değildir", (await as(A, `select is_super_admin() v`)).rows[0].v === false);
+ok("süper yönetici tüm kurumları görür", (await as(SA, `select * from organizations`)).rows.length >= 2);
+ok("süper yönetici tüm profilleri görür", (await as(SA, `select * from profiles`)).rows.length >= 7);
+ok("süper yönetici tüm yanıtları görür", (await as(SA, `select * from responses`)).rows.length > 0);
+ok("normal kullanıcı başkalarının profillerini göremez", (await as(E, `select * from profiles`)).rows.length === 1);
+ok("süper yönetici başka kurumun anketini düzenler", (await as(SA, `update surveys set title = title || ' (SY)' where org_id=$1 returning id`, [org.id])).rows.length > 0);
+
+const dOrg = (await as(D, `select * from create_organization('Dilek Derneği','dilek','Sivil Toplum / Dernek','1–10','Van')`)).rows[0];
+ok("yeni kurum ücretsiz paketle ve aktif başlar", dOrg.plan_id === "baslangic" && dOrg.status === "aktif" && dOrg.ends_at === null);
+await expectFail("kurum yöneticisi kendi abonelik durumunu değiştiremez", as(D, `update organizations set status='aktif', ends_at = now() + interval '1 year' where id=$1`, [dOrg.id]));
+await expectFail("kurum yöneticisi paketini değiştiremez", as(D, `update organizations set plan_id='kurumsal' where id=$1`, [dOrg.id]));
+ok("kurum yöneticisi kurum adını değiştirebilir", (await as(D, `update organizations set name='Dilek Yardımlaşma Derneği' where id=$1 returning id`, [dOrg.id])).rows.length === 1);
+ok("kullanıcı adını ve telefonunu değiştirebilir", (await as(D, `update profiles set full_name='Dilek Kaya', phone='05550000000' where id='${D}' returning id`)).rows.length === 1);
+await expectFail("kullanıcı kendi hesap durumunu değiştiremez", as(D, `update profiles set status='engellendi' where id='${D}'`));
+
+ok("ziyaretçi paket fiyatlarını görür", (await asAnon(`select id, price from plans order by sort`)).rows.length === 3);
+ok("normal kullanıcı paket fiyatını değiştiremez", (await as(D, `update plans set price=1 where id='profesyonel' returning id`)).rows.length === 0);
+ok("süper yönetici paket fiyatını değiştirir", (await as(SA, `update plans set price=599 where id='profesyonel' returning price`)).rows[0].price === "599.00");
+ok("normal kullanıcı IBAN değiştiremez", (await as(D, `update payment_settings set iban='TR00' returning iban`)).rows.length === 0);
+ok("süper yönetici IBAN girer", (await as(SA, `update payment_settings set iban='TR120006400000112345678901', bank_name='Örnek Bank', account_holder='Anket360 Ltd.' returning iban`)).rows.length === 1);
+ok("kullanıcılar IBAN bilgisini görür", (await as(D, `select iban from payment_settings`)).rows[0].iban === "TR120006400000112345678901");
+
+const odeme = (await as(D, `insert into payments (org_id, plan_id, amount, status, note) values ($1,'profesyonel', 1, 'onaylandi', 'havale yaptım') returning *`, [dOrg.id])).rows[0];
+ok("ödeme bildirimi tutarı paketten alır, durum 'beklemede' zorlanır", odeme.amount === "599.00" && odeme.status === "beklemede" && odeme.reference.length === 8 && odeme.created_by === D);
+await expectFail("ücretsiz paket için ödeme bildirimi yapılamaz", as(D, `insert into payments (org_id, plan_id) values ($1,'baslangic')`, [dOrg.id]));
+await expectFail("başka kurum adına ödeme bildirimi yapılamaz", as(E, `insert into payments (org_id, plan_id) values ($1,'profesyonel')`, [dOrg.id]));
+ok("yabancı başka kurumun ödemelerini göremez", (await as(E, `select * from payments`)).rows.length === 0);
+await expectFail("normal kullanıcı ödeme onaylayamaz", as(D, `select admin_odeme_karar($1, true)`, [odeme.id]));
+await as(SA, `select admin_odeme_karar($1, true, 'Havale geldi')`, [odeme.id]);
+const dOrg2 = (await db.query(`select * from organizations where id=$1`, [dOrg.id])).rows[0];
+const gun = (new Date(dOrg2.ends_at) - Date.now()) / 86400000;
+ok("onaylanan ödeme paketi ve süreyi günceller (+30 gün)", dOrg2.plan_id === "profesyonel" && gun > 29.9 && gun < 30.1);
+await expectFail("aynı ödeme ikinci kez karara bağlanamaz", as(SA, `select admin_odeme_karar($1, false)`, [odeme.id]));
+
+// Yayında anket sınırı (Başlangıç: 3)
+const eOrg = (await as(E, `select * from create_organization('E Ltd','e','Perakende','1–10','Van')`)).rows[0];
+const yeniAnket = (st) => as(E, `insert into surveys (org_id,title,created_by,questions,settings,status) values ($1,'S','${E}',$2,$3,$4) returning id`, [eOrg.id, sorular, ayar(), st]);
+for (let i = 0; i < 3; i++) await yeniAnket("yayinda");
+await expectFail("ücretsiz pakette 4. anket yayınlanamaz", yeniAnket("yayinda"));
+ok("taslak anket sınırdan etkilenmez", (await yeniAnket("taslak")).rows.length === 1);
+const eAnket = (await db.query(`select id from surveys where org_id=$1 and status='yayinda' limit 1`, [eOrg.id])).rows[0].id;
+ok("aktif kurumun anketi yanıt alır", !!(await gonder(eAnket, { q1: "Mavi", q2: 5 })).rows[0].r);
+
+await as(SA, `update organizations set status='pasif' where id=$1`, [eOrg.id]);
+ok("pasif kurumun anketi kapalı görünür", (await getPub(eAnket))?.status === "kapali");
+await expectFail("pasif kurumun anketi yanıt almaz", gonder(eAnket, { q1: "Mavi", q2: 5 }));
+await expectFail("pasif kurum anket düzenleyemez", as(E, `update surveys set title='X' where id=$1`, [eAnket]));
+await as(SA, `update organizations set status='aktif', plan_id='profesyonel', ends_at = now() - interval '1 day' where id=$1`, [eOrg.id]);
+await expectFail("süresi dolan kurumun anketi yanıt almaz", gonder(eAnket, { q1: "Mavi", q2: 5 }));
+await as(SA, `update organizations set ends_at = now() + interval '30 days' where id=$1`, [eOrg.id]);
+ok("süre uzatılınca anket yeniden yanıt alır", !!(await gonder(eAnket, { q1: "Yeşil", q2: 7 })).rows[0].r);
+
+// Hesap dondurma / engelleme / silme
+await as(E, `select hesabimi_dondur()`);
+ok("dondurulan hesap kurum verilerine erişemez", (await as(E, `select * from organizations`)).rows.length === 0);
+ok("dondurulan hesap kendi profilini görür", (await as(E, `select status from profiles where id='${E}'`)).rows[0].status === "donduruldu");
+await as(E, `select hesabimi_etkinlestir()`);
+ok("kullanıcı kendi dondurduğu hesabı yeniden açar", (await as(E, `select * from organizations`)).rows.length === 1);
+await as(SA, `update profiles set status='engellendi' where id='${E}'`);
+await expectFail("engellenen kullanıcı hesabını kendisi açamaz", as(E, `select hesabimi_etkinlestir()`));
+await expectFail("engellenen kullanıcı yeni kurum oluşturamaz", as(E, `select * from create_organization('Yeni','yeni','Diğer','1–10','Van')`));
+ok("engellenen kullanıcı kurum verilerini göremez", (await as(E, `select * from surveys`)).rows.length === 0);
+
+await expectFail("normal kullanıcı başkasını silemez", as(D, `select admin_kullanici_sil('${F}')`));
+await expectFail("platform yöneticisi silinemez", as(SA, `select admin_kullanici_sil('${SA}')`));
+await as(SA, `select admin_kullanici_sil('${E}')`);
+ok("süper yönetici kullanıcıyı ve kurumunu siler", (await db.query(`select count(*)::int n from profiles where id='${E}'`)).rows[0].n === 0 && (await db.query(`select count(*)::int n from organizations where id=$1`, [eOrg.id])).rows[0].n === 0);
+const fOrg = (await as(F, `select * from create_organization('F Kurum','f','Diğer','1–10','Van')`)).rows[0];
+await as(F, `select hesabimi_sil()`);
+ok("kullanıcı hesabını tamamen siler (KVKK), kurumu da silinir", (await db.query(`select count(*)::int n from auth.users where id='${F}'`)).rows[0].n === 0 && (await db.query(`select count(*)::int n from organizations where id=$1`, [fOrg.id])).rows[0].n === 0);
+ok("silinen kurumun ödemeleri de silinir", (await db.query(`select count(*)::int n from payments where org_id=$1`, [fOrg.id])).rows[0].n === 0);
+
+// Genel eğilim istatistiği
+const istSorular = JSON.stringify([{ id: "g1", type: "tek_secim", title: "En önemli sorun", required: true, options: ["Ekonomi", "Eğitim"], statKey: "ulke-sorunu" }]);
+const istA = (await as(A, `insert into surveys (org_id,title,created_by,questions,settings,status) values ($1,'İst A','${A}',$2,$3,'taslak') returning id`, [org.id, istSorular, ayar({ singleResponse: false })])).rows[0].id;
+await as(SA, `update surveys set status='yayinda' where id=$1`, [istA]);
+for (let i = 0; i < 6; i++) await gonder(istA, { g1: i < 5 ? "Ekonomi" : "Eğitim" });
+ok("10 yanıttan azsa istatistik gösterilmez", (await as(D, `select genel_istatistik('ulke-sorunu') v`)).rows[0].v.yetersiz === true);
+const istD = (await as(D, `insert into surveys (org_id,title,created_by,questions,settings,status) values ($1,'İst D','${D}',$2,$3,'yayinda') returning id`, [dOrg.id, istSorular, ayar({ singleResponse: false })])).rows[0].id;
+for (let i = 0; i < 6; i++) await gonder(istD, { g1: i < 3 ? "Ekonomi" : "Eğitim" });
+const ist = (await as(D, `select genel_istatistik('ulke-sorunu') v`)).rows[0].v;
+ok("istatistik farklı kurumların yanıtlarını toplar (yalnız sayılar)", ist.toplam === 12 && ist.secenekler[0].label === "Ekonomi" && ist.secenekler[0].count === 8 && !JSON.stringify(ist).includes("respondent"));
+await expectFail("ziyaretçi genel istatistiği çağıramaz", asAnon(`select genel_istatistik('ulke-sorunu')`));
 
 console.log("pgcrypto token örneği:", (await db.query("select token from invitations limit 1")).rows[0]?.token);
 await client.end();

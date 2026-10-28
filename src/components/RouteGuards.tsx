@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { safeRedirect } from "@/lib/utils";
+import AccountStatusPage from "@/pages/AccountStatusPage";
 
 export function FullPageSpinner() {
   return (
@@ -16,13 +17,27 @@ export function RequireAuth() {
   const location = useLocation();
   if (loading) return <FullPageSpinner />;
   if (!user) return <Navigate to="/giris" replace state={{ from: location.pathname }} />;
+  // Dondurulan ya da engellenen hesap yalnızca durum sayfasını görür
+  if (user.status !== "aktif") return <AccountStatusPage />;
+  return <Outlet />;
+}
+
+/** Yalnızca platform (süper) yöneticisi */
+export function RequireSuperAdmin() {
+  const { user } = useAuth();
+  if (!user?.isSuperAdmin) return <Navigate to="/panel" replace />;
   return <Outlet />;
 }
 
 /** Kurumu olmayan kullanıcıyı kurum oluşturma sayfasına yönlendirir. */
 export function RequireOrg() {
-  const { organizations } = useAuth();
-  if (organizations.length === 0) return <Navigate to="/kurum/olustur" replace />;
+  const { organizations, user } = useAuth();
+  const location = useLocation();
+  if (organizations.length === 0) {
+    // Kurumu olmayan süper yönetici başka kurumların anketlerini düzenleyebilir
+    if (user?.isSuperAdmin && /^\/panel\/anketler\/[^/]+\/duzenle$/.test(location.pathname)) return <Outlet />;
+    return <Navigate to={user?.isSuperAdmin ? "/yonetim" : "/kurum/olustur"} replace />;
+  }
   return <Outlet />;
 }
 

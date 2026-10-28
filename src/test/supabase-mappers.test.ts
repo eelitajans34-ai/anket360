@@ -5,7 +5,7 @@ describe("Supabase eşlemeleri", () => {
   it("satırları uygulama modeline çevirir", () => {
     expect(
       toOrganization({ id: "1", name: "K", slug: "k", sector: "Eğitim", size: "1–10", city: "Van", phone: null, website: null, owner_id: "u", created_at: "t" }),
-    ).toEqual({ id: "1", name: "K", slug: "k", sector: "Eğitim", size: "1–10", city: "Van", phone: undefined, website: undefined, ownerId: "u", createdAt: "t" });
+    ).toEqual({ id: "1", name: "K", slug: "k", sector: "Eğitim", size: "1–10", city: "Van", phone: undefined, website: undefined, ownerId: "u", createdAt: "t", planId: "baslangic", status: "aktif", endsAt: undefined, adminNote: "" });
     const s = toSurvey({
       id: "s", org_id: "o", title: "T", description: "", status: "taslak", questions: null as never,
       settings: { anonymous: true, singleResponse: true, showProgress: true }, created_by: "u", created_at: "a", updated_at: "b",

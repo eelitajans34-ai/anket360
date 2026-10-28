@@ -4,6 +4,7 @@ import { QUESTION_TYPES, questionTypeMeta } from "@/lib/constants";
 import type { ConditionOperator, Question, QuestionCondition, QuestionType } from "@/lib/types";
 import { changeQuestionType } from "./templates";
 import { Toggle } from "@/components/ui/Field";
+import { BenchmarkHint } from "./BenchmarkHint";
 
 interface Props {
   question: Question;
@@ -44,6 +45,7 @@ export function QuestionEditor({ question: q, index, total, previous, conditionE
           {QUESTION_TYPES.map((t) => <option key={t.type} value={t.type}>{t.label}</option>)}
         </select>
       </div>
+      {q.statKey && <BenchmarkHint question={q} />}
       <input className="input mt-3 text-slate-600" placeholder="Açıklama (isteğe bağlı)" value={q.description ?? ""} onChange={(e) => patch({ description: e.target.value || undefined })} aria-label={`Soru ${index + 1} açıklaması`} />
 
       {meta.hasOptions && (

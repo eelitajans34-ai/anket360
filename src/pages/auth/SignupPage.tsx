@@ -41,9 +41,10 @@ export default function SignupPage() {
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
-      const user = await signUp({ fullName: form.fullName, email: form.email, password: form.password });
+      const user = await signUp({ fullName: form.fullName, email: form.email, password: form.password, kvkkConsent: form.kvkk });
       if (!user) setConfirmSentTo(form.email.trim().toLowerCase());
-      else navigate(from, { replace: true });
+      // Süper yönetici kurum oluşturmak zorunda değil; doğrudan yönetim paneline gider
+      else navigate(user.isSuperAdmin && !(location.state as { from?: string } | null)?.from ? "/yonetim" : from, { replace: true });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Kayıt oluşturulamadı.");
     } finally {

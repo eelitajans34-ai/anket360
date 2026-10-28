@@ -58,12 +58,13 @@ export default function SurveyBuilderPage() {
     setLoading(true);
     db.getSurvey(id).then((s) => {
       if (!alive) return;
-      if (!s || s.orgId !== activeOrg?.id) setNotFound(true);
+      // Süper yönetici her kurumun anketini düzenleyebilir
+      if (!s || (s.orgId !== activeOrg?.id && !user?.isSuperAdmin)) setNotFound(true);
       else setDraft({ title: s.title, description: s.description, status: s.status, questions: s.questions, settings: { ...DEFAULT_SETTINGS, ...s.settings } });
       setLoading(false);
     });
     return () => { alive = false; };
-  }, [id, isNew, activeOrg?.id]);
+  }, [id, isNew, activeOrg?.id, user?.isSuperAdmin]);
 
   // Kaydedilmemiş değişiklik uyarısı
   const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname);
@@ -82,13 +83,13 @@ export default function SurveyBuilderPage() {
   const setQuestions = (fn: (qs: Question[]) => Question[]) => update((d) => ({ ...d, questions: fn(d.questions) }));
 
   async function save(status?: SurveyStatus) {
-    if (!draft || !user || !activeOrg) return;
+    if (!draft || !user || (isNew && !activeOrg)) return;
     const payload = { ...draft, status: status ?? draft.status };
     setSaving(true);
     setMsg(null);
     try {
       if (isNew) {
-        const created = await db.createSurvey(activeOrg.id, user.id, payload);
+        const created = await db.createSurvey(activeOrg!.id, user.id, payload);
         setDirty(false);
         setDraft(payload);
         // Engelleyicinin yönlendirmeyi durdurmaması için kirli durumu bir sonraki çizimde temizlenmiş olarak yönlendir

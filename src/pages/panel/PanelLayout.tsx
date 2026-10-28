@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Building2, ChevronDown, ClipboardList, LayoutDashboard, LogOut, Menu, Plus, UserCircle, X } from "lucide-react";
+import { Building2, ChevronDown, ClipboardList, CreditCard, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, UserCircle, X } from "lucide-react";
+import { orgRestriction } from "@/lib/platform";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth";
 import { backend } from "@/lib/data";
@@ -11,11 +12,14 @@ const NAV = [
   { to: "/panel", label: "Genel Bakış", icon: LayoutDashboard, end: true },
   { to: "/panel/anketler", label: "Anketler", icon: ClipboardList },
   { to: "/panel/kurum", label: "Kurum", icon: Building2 },
-  { to: "/panel/profil", label: "Profilim", icon: UserCircle },
+  { to: "/panel/abonelik", label: "Abonelik", icon: CreditCard },
+  { to: "/panel/profil", label: "Hesabım", icon: UserCircle },
 ];
 
 export default function PanelLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { activeOrg } = useAuth();
+  const restriction = activeOrg ? orgRestriction(activeOrg) : null;
   return (
     <div className="min-h-screen bg-slate-50">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:block">
@@ -38,6 +42,11 @@ export default function PanelLayout() {
         {backend === "local" && (
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
             Demo modu: veriler yalnızca bu tarayıcıda saklanıyor.
+          </div>
+        )}
+        {restriction && (
+          <div className="border-b border-red-200 bg-red-50 px-4 py-2.5 text-center text-sm text-red-800" role="alert">
+            {restriction} <Link to="/panel/abonelik" className="font-semibold underline">Abonelik</Link>
           </div>
         )}
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
@@ -107,6 +116,11 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             <Icon className="h-5 w-5" />{label}
           </NavLink>
         ))}
+        {user?.isSuperAdmin && (
+          <NavLink to="/yonetim" onClick={onNavigate} className="mt-3 flex items-center gap-3 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-sm font-semibold text-violet-800 hover:bg-violet-100">
+            <ShieldCheck className="h-5 w-5" />Süper Yönetici
+          </NavLink>
+        )}
       </nav>
 
       <div className="border-t border-slate-200 p-3">

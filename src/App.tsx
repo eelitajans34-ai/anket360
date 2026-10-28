@@ -1,7 +1,9 @@
 import { createBrowserRouter, Outlet, RouterProvider, type RouteObject } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
 import { lazy, Suspense } from "react";
-import { FullPageSpinner, GuestOnly, RequireAuth, RequireOrg } from "@/components/RouteGuards";
+import { FullPageSpinner, GuestOnly, RequireAuth, RequireOrg, RequireSuperAdmin } from "@/components/RouteGuards";
+import SubscriptionPage from "@/pages/panel/SubscriptionPage";
+import PublicSurveysPage from "@/pages/PublicSurveysPage";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
@@ -19,6 +21,7 @@ import PublicSurveyPage from "@/pages/PublicSurveyPage";
 
 // Anket düzenleyici (rapor, grafikler, paylaşım) ayrı dosyada; ilk açılışta yüklenmez
 const SurveyBuilderPage = lazy(() => import("@/pages/panel/SurveyBuilderPage"));
+const AdminPage = lazy(() => import("@/pages/admin/AdminPage"));
 
 function Builder({ isNew }: { isNew?: boolean }) {
   return (
@@ -43,6 +46,7 @@ export const routes: RouteObject[] = [
       { path: "/", element: <HomePage /> },
       { path: "/sifre-yenile", element: <ResetPasswordPage /> },
       { path: "/davet/:token", element: <InvitePage /> },
+      { path: "/anketler", element: <PublicSurveysPage /> },
       { path: "/a/:id", element: <PublicSurveyPage /> },
       {
         element: <GuestOnly />,
@@ -57,6 +61,10 @@ export const routes: RouteObject[] = [
         children: [
           { path: "/kurum/olustur", element: <CreateOrgPage /> },
           {
+            element: <RequireSuperAdmin />,
+            children: [{ path: "/yonetim", element: <Suspense fallback={<FullPageSpinner />}><AdminPage /></Suspense> }],
+          },
+          {
             element: <RequireOrg />,
             children: [
               {
@@ -68,6 +76,7 @@ export const routes: RouteObject[] = [
                   { path: "anketler/yeni", element: <Builder isNew /> },
                   { path: "anketler/:id/duzenle", element: <Builder /> },
                   { path: "kurum", element: <OrgSettingsPage /> },
+                  { path: "abonelik", element: <SubscriptionPage /> },
                   { path: "profil", element: <ProfilePage /> },
                 ],
               },

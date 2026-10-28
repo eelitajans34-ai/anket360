@@ -1,12 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Answers, ID, Invitation, OrganizationInput, PublicSurvey, SignUpInput, Survey, SurveyInput, User } from "@/lib/types";
+import type { AccountStatus, AdminOrganization, AdminUser, Answers, Benchmark, ID, Invitation, OrganizationInput, OrgRole, OrgStatus, Payment, PaymentSettings, Plan, PublicSurvey, SignUpInput, Survey, SurveyInput, User } from "@/lib/types";
 import { cleanAnswers } from "@/lib/answers";
 import { appUrl, isValidEmail, passwordIssues, slugify } from "@/lib/utils";
 import { validateOrg, validateSurvey } from "./local-store";
 import { DataError, type DataStore } from "./store";
 import {
-  toDataError, toInvitation, toMembership, toOrganization, toResponse, toSurvey, toUser,
-  type InvitationRow, type MembershipRow, type OrganizationRow, type ProfileRow, type ResponseRow, type SurveyRow,
+  fromPlan, toDataError, toInvitation, toMembership, toOrganization, toPayment, toPaymentSettings, toPlan, toResponse, toSurvey, toUser,
+  type InvitationRow, type MembershipRow, type OrganizationRow, type PaymentRow, type PaymentSettingsRow, type PlanRow, type ProfileRow, type ResponseRow, type SurveyRow,
 } from "./supabase-mappers";
 
 /**
@@ -36,7 +36,7 @@ export class SupabaseStore implements DataStore {
     const { data, error } = await this.sb.auth.signUp({
       email,
       password: input.password,
-      options: { data: { full_name: fullName }, emailRedirectTo: this.link("/panel") },
+      options: { data: { full_name: fullName, kvkk_onay: input.kvkkConsent === true }, emailRedirectTo: this.link("/panel") },
     });
     if (error) throw toDataError(error, "Kayıt oluşturulamadı.");
     // E-posta doğrulaması açıksa ve adres zaten kayıtlıysa Supabase kimlik listesi boş bir kullanıcı döner.
@@ -63,9 +63,12 @@ export class SupabaseStore implements DataStore {
   async currentUser(): Promise<User | null> {
     const { data: { session } } = await this.sb.auth.getSession();
     if (!session) return null;
-    const { data, error } = await this.sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle<ProfileRow>();
+    const [{ data, error }, admin] = await Promise.all([
+      this.sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle<ProfileRow>(),
+      this.sb.rpc("is_super_admin"),
+    ]);
     if (error) throw toDataError(error);
-    return data ? toUser(data) : null;
+    return data ? toUser(data, admin.data === true) : null;
   }
 
   async requestPasswordReset(email: string): Promise<void> {
@@ -88,8 +91,13 @@ export class SupabaseStore implements DataStore {
     return () => data.subscription.unsubscribe();
   }
 
-  async updateProfile(userId: ID, patch: Partial<Pick<User, "fullName">>): Promise<User> {
+  async updateProfile(userId: ID, patch: Partial<Pick<User, "fullName" | "phone">>): Promise<User> {
     const row: Partial<ProfileRow> = {};
+    if (patch.phone !== undefined) {
+      const phone = patch.phone.trim();
+      if (phone && !/^[\d\s()+-]{10,}$/.test(phone)) throw new DataError("validation", "Geçerli bir telefon numarası girin.");
+      row.phone = phone || null;
+    }
     if (patch.fullName !== undefined) {
       if (patch.fullName.trim().length < 2) throw new DataError("validation", "Ad soyad en az 2 karakter olmalı.");
       row.full_name = patch.fullName.trim();
@@ -97,6 +105,22 @@ export class SupabaseStore implements DataStore {
     const { data, error } = await this.sb.from("profiles").update(row).eq("id", userId).select().single<ProfileRow>();
     if (error) throw toDataError(error, "Profil güncellenemedi.");
     return toUser(data);
+  }
+
+  async freezeMyAccount(): Promise<void> {
+    const { error } = await this.sb.rpc("hesabimi_dondur");
+    if (error) throw toDataError(error, "Hesap dondurulamadı.");
+  }
+
+  async reactivateMyAccount(): Promise<void> {
+    const { error } = await this.sb.rpc("hesabimi_etkinlestir");
+    if (error) throw toDataError(error, "Hesap açılamadı.");
+  }
+
+  async deleteMyAccount(): Promise<void> {
+    const { error } = await this.sb.rpc("hesabimi_sil");
+    if (error) throw toDataError(error, "Hesap silinemedi.");
+    await this.sb.auth.signOut({ scope: "local" });
   }
 
   // ---------- Kurumlar ----------
@@ -332,6 +356,133 @@ export class SupabaseStore implements DataStore {
       if (data.length < page) break;
     }
     return rows.map(toResponse);
+  }
+
+  // ---------- Abonelik ve ödeme ----------
+
+  async listPlans(): Promise<Plan[]> {
+    const { data, error } = await this.sb.from("plans").select("*").order("sort").returns<PlanRow[]>();
+    if (error) throw toDataError(error);
+    return data.map(toPlan);
+  }
+
+  async getPaymentSettings(): Promise<PaymentSettings> {
+    const { data, error } = await this.sb.from("payment_settings").select("*").maybeSingle<PaymentSettingsRow>();
+    if (error) throw toDataError(error);
+    return toPaymentSettings(data);
+  }
+
+  async createPayment(orgId: ID, planId: string, note: string): Promise<Payment> {
+    const { data, error } = await this.sb.from("payments").insert({ org_id: orgId, plan_id: planId, note: note.trim() }).select().single<PaymentRow>();
+    if (error) throw toDataError(error, "Ödeme bildirimi gönderilemedi.");
+    return toPayment(data);
+  }
+
+  async listPayments(orgId?: ID): Promise<Payment[]> {
+    let q = this.sb.from("payments").select("*").order("created_at", { ascending: false });
+    if (orgId) q = q.eq("org_id", orgId);
+    const { data, error } = await q.returns<PaymentRow[]>();
+    if (error) throw toDataError(error);
+    return data.map(toPayment);
+  }
+
+  async getBenchmark(statKey: string): Promise<Benchmark> {
+    const { data, error } = await this.sb.rpc("genel_istatistik", { p_key: statKey });
+    if (error) throw toDataError(error);
+    const d = data as { toplam: number; yetersiz?: boolean; secenekler?: Array<{ label: string; count: number }>; ortalama?: number | string | null };
+    return {
+      total: d.toplam,
+      insufficient: d.yetersiz,
+      options: d.secenekler,
+      average: d.ortalama === null || d.ortalama === undefined ? null : Number(d.ortalama),
+    };
+  }
+
+  // ---------- Süper yönetici (yetki RLS ile denetlenir) ----------
+
+  async adminListOrganizations(): Promise<AdminOrganization[]> {
+    const { data, error } = await this.sb
+      .from("organizations")
+      .select("*, sahip:profiles!organizations_owner_id_fkey(email, full_name), memberships(count), surveys(count)")
+      .order("created_at", { ascending: false })
+      .returns<Array<OrganizationRow & { sahip: { email: string; full_name: string } | null; memberships: Array<{ count: number }>; surveys: Array<{ count: number }> }>>();
+    if (error) throw toDataError(error);
+    return data.map((r) => ({
+      ...toOrganization(r),
+      ownerEmail: r.sahip?.email ?? "",
+      ownerName: r.sahip?.full_name ?? "",
+      memberCount: r.memberships?.[0]?.count ?? 0,
+      surveyCount: r.surveys?.[0]?.count ?? 0,
+    }));
+  }
+
+  async adminUpdateOrganization(orgId: ID, patch: { status?: OrgStatus; planId?: string; endsAt?: string | null; adminNote?: string }): Promise<void> {
+    const row: Partial<OrganizationRow> = {};
+    if (patch.status) row.status = patch.status;
+    if (patch.planId) row.plan_id = patch.planId;
+    if (patch.endsAt !== undefined) row.ends_at = patch.endsAt;
+    if (patch.adminNote !== undefined) row.admin_note = patch.adminNote;
+    const { data, error } = await this.sb.from("organizations").update(row).eq("id", orgId).select("id");
+    if (error) throw toDataError(error, "Kurum güncellenemedi.");
+    if (!data.length) throw new DataError("forbidden", "Bu işlem için platform yöneticisi yetkisi gerekir.");
+  }
+
+  async adminDeleteOrganization(orgId: ID): Promise<void> {
+    const { data, error } = await this.sb.from("organizations").delete().eq("id", orgId).select("id");
+    if (error) throw toDataError(error, "Kurum silinemedi.");
+    if (!data.length) throw new DataError("forbidden", "Bu işlem için platform yöneticisi yetkisi gerekir.");
+  }
+
+  async adminListUsers(): Promise<AdminUser[]> {
+    const { data, error } = await this.sb
+      .from("profiles")
+      .select("*, memberships(role, organizations(id, name))")
+      .order("created_at", { ascending: false })
+      .returns<Array<ProfileRow & { memberships: Array<{ role: OrgRole; organizations: { id: string; name: string } | null }> }>>();
+    if (error) throw toDataError(error);
+    return data.map((r) => ({
+      ...toUser(r),
+      organizations: (r.memberships ?? []).flatMap((m) => (m.organizations ? [{ id: m.organizations.id, name: m.organizations.name, role: m.role }] : [])),
+    }));
+  }
+
+  async adminSetUserStatus(userId: ID, status: AccountStatus): Promise<void> {
+    const { data, error } = await this.sb
+      .from("profiles")
+      .update({ status, frozen_by: status === "donduruldu" ? "yonetici" : null })
+      .eq("id", userId)
+      .select("id");
+    if (error) throw toDataError(error, "Kullanıcı güncellenemedi.");
+    if (!data.length) throw new DataError("forbidden", "Bu işlem için platform yöneticisi yetkisi gerekir.");
+  }
+
+  async adminDeleteUser(userId: ID): Promise<void> {
+    const { error } = await this.sb.rpc("admin_kullanici_sil", { p_user: userId });
+    if (error) throw toDataError(error, "Kullanıcı silinemedi.");
+  }
+
+  async adminDecidePayment(paymentId: ID, approve: boolean, note = ""): Promise<void> {
+    const { error } = await this.sb.rpc("admin_odeme_karar", { p_id: paymentId, p_onay: approve, p_not: note });
+    if (error) throw toDataError(error, "Ödeme güncellenemedi.");
+  }
+
+  async adminUpdatePlan(plan: Plan): Promise<void> {
+    if (!plan.name.trim()) throw new DataError("validation", "Paket adı boş olamaz.");
+    if (!(plan.price >= 0)) throw new DataError("validation", "Fiyat 0 veya daha büyük olmalı.");
+    if (!(plan.periodDays > 0)) throw new DataError("validation", "Süre en az 1 gün olmalı.");
+    const { data, error } = await this.sb.from("plans").update(fromPlan(plan)).eq("id", plan.id).select("id");
+    if (error) throw toDataError(error, "Paket güncellenemedi.");
+    if (!data.length) throw new DataError("forbidden", "Bu işlem için platform yöneticisi yetkisi gerekir.");
+  }
+
+  async adminUpdatePaymentSettings(st: PaymentSettings): Promise<void> {
+    const { data, error } = await this.sb
+      .from("payment_settings")
+      .update({ bank_name: st.bankName.trim(), account_holder: st.accountHolder.trim(), iban: st.iban.replace(/\s+/g, "").toUpperCase(), note: st.note.trim(), updated_at: new Date().toISOString() })
+      .eq("id", true)
+      .select("id");
+    if (error) throw toDataError(error, "Ödeme bilgileri kaydedilemedi.");
+    if (!data.length) throw new DataError("forbidden", "Bu işlem için platform yöneticisi yetkisi gerekir.");
   }
 }
 

@@ -1,13 +1,26 @@
-import type { Invitation, Membership, Organization, OrgRole, Survey, SurveyResponse, User } from "@/lib/types";
+import type { AccountStatus, Invitation, Membership, Organization, OrgRole, OrgStatus, Payment, PaymentSettings, Plan, Survey, SurveyResponse, User } from "@/lib/types";
 import { DataError } from "./store";
 
 /** Veritabanı satırları (snake_case) ↔ uygulama modelleri (camelCase). */
 
-export interface ProfileRow { id: string; email: string; full_name: string; created_at: string }
+export interface ProfileRow {
+  id: string; email: string; full_name: string; created_at: string;
+  phone?: string | null; status?: AccountStatus; frozen_by?: "kullanici" | "yonetici" | null; kvkk_onay_at?: string | null;
+}
 export interface OrganizationRow {
   id: string; name: string; slug: string; sector: string; size: string; city: string;
   phone: string | null; website: string | null; owner_id: string; created_at: string;
+  plan_id?: string; status?: OrgStatus; ends_at?: string | null; admin_note?: string;
 }
+export interface PlanRow {
+  id: string; name: string; price: string | number; period_days: number; max_active_surveys: number | null;
+  description: string; features: string[]; sort: number; active: boolean;
+}
+export interface PaymentRow {
+  id: string; org_id: string; plan_id: string; amount: string | number; reference: string; status: Payment["status"];
+  note: string; admin_note: string; created_by: string | null; created_at: string; decided_at: string | null;
+}
+export interface PaymentSettingsRow { bank_name: string; account_holder: string; iban: string; note: string }
 export interface MembershipRow { org_id: string; user_id: string; role: OrgRole; created_at: string }
 export interface InvitationRow {
   id: string; org_id: string; email: string; role: Invitation["role"]; token: string;
@@ -19,11 +32,32 @@ export interface SurveyRow {
 }
 export interface ResponseRow { id: string; survey_id: string; answers: SurveyResponse["answers"]; created_at: string }
 
-export const toUser = (r: ProfileRow): User => ({ id: r.id, email: r.email, fullName: r.full_name, createdAt: r.created_at });
+export const toUser = (r: ProfileRow, isSuperAdmin?: boolean): User => ({
+  id: r.id, email: r.email, fullName: r.full_name, createdAt: r.created_at,
+  phone: r.phone ?? undefined, status: r.status ?? "aktif", frozenBy: r.frozen_by ?? undefined,
+  kvkkConsentAt: r.kvkk_onay_at ?? undefined, ...(isSuperAdmin !== undefined ? { isSuperAdmin } : {}),
+});
+
+export const toPlan = (r: PlanRow): Plan => ({
+  id: r.id, name: r.name, price: Number(r.price), periodDays: r.period_days, maxActiveSurveys: r.max_active_surveys,
+  description: r.description, features: r.features ?? [], sort: r.sort, active: r.active,
+});
+export const fromPlan = (p: Plan): Omit<PlanRow, "id"> => ({
+  name: p.name.trim(), price: p.price, period_days: p.periodDays, max_active_surveys: p.maxActiveSurveys,
+  description: p.description, features: p.features, sort: p.sort, active: p.active,
+});
+export const toPayment = (r: PaymentRow): Payment => ({
+  id: r.id, orgId: r.org_id, planId: r.plan_id, amount: Number(r.amount), reference: r.reference, status: r.status,
+  note: r.note, adminNote: r.admin_note, createdBy: r.created_by ?? undefined, createdAt: r.created_at, decidedAt: r.decided_at ?? undefined,
+});
+export const toPaymentSettings = (r: PaymentSettingsRow | null): PaymentSettings => ({
+  bankName: r?.bank_name ?? "", accountHolder: r?.account_holder ?? "", iban: r?.iban ?? "", note: r?.note ?? "",
+});
 
 export const toOrganization = (r: OrganizationRow): Organization => ({
   id: r.id, name: r.name, slug: r.slug, sector: r.sector, size: r.size, city: r.city,
   phone: r.phone ?? undefined, website: r.website ?? undefined, ownerId: r.owner_id, createdAt: r.created_at,
+  planId: r.plan_id ?? "baslangic", status: r.status ?? "aktif", endsAt: r.ends_at ?? undefined, adminNote: r.admin_note ?? "",
 });
 
 export const toMembership = (r: MembershipRow): Membership => ({ orgId: r.org_id, userId: r.user_id, role: r.role, createdAt: r.created_at });

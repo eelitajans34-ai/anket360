@@ -61,7 +61,7 @@ describe("SupabaseStore (sahte istemci)", () => {
     expect(auth.signUp).toHaveBeenCalledWith({
       email: "a@b.co",
       password: "sifre1234",
-      options: { data: { full_name: "Ayşe" }, emailRedirectTo: "https://anket360.test/panel" },
+      options: { data: { full_name: "Ayşe", kvkk_onay: false }, emailRedirectTo: "https://anket360.test/panel" },
     });
   });
 
@@ -170,5 +170,31 @@ describe("SupabaseStore (sahte istemci)", () => {
 
     functions.invoke.mockResolvedValueOnce(httpErr(429, { code: "cok_sik", message: "Bu davet az önce gönderildi. Bir dakika sonra tekrar deneyin." }));
     await expect(store.sendInvitationEmail("i1")).rejects.toMatchObject({ code: "validation", message: expect.stringContaining("az önce") });
+  });
+
+  it("genel eğilim, hesap ve yönetim çağrıları doğru RPC/tablolara gider", async () => {
+    nextResults = [{ data: { toplam: 12, secenekler: [{ label: "Ekonomi", count: 9 }], ortalama: null }, error: null }];
+    await expect(store.getBenchmark("ulke")).resolves.toEqual({ total: 12, insufficient: undefined, options: [{ label: "Ekonomi", count: 9 }], average: null });
+    expect(calls[0]).toMatchObject({ rpc: "genel_istatistik" });
+
+    calls.length = 0;
+    nextResults = [{ data: null, error: null }];
+    await store.freezeMyAccount();
+    expect(calls[0]).toMatchObject({ rpc: "hesabimi_dondur" });
+
+    calls.length = 0;
+    nextResults = [{ data: [{ id: "u2" }], error: null }];
+    await store.adminSetUserStatus("u2", "donduruldu");
+    expect(calls[0]!.table).toBe("profiles");
+    expect(calls[0]!.ops.find(([m]) => m === "update")![1][0]).toEqual({ status: "donduruldu", frozen_by: "yonetici" });
+
+    calls.length = 0;
+    nextResults = [{ data: [{ id: true }], error: null }];
+    await store.adminUpdatePaymentSettings({ bankName: " Örnek Bank ", accountHolder: "A", iban: "tr33 0006 1005 1978 6457 8413 26", note: "" });
+    expect(calls[0]!.ops.find(([m]) => m === "update")![1][0]).toMatchObject({ bank_name: "Örnek Bank", iban: "TR330006100519786457841326" });
+
+    calls.length = 0;
+    nextResults = [{ data: [], error: null }];
+    await expect(store.adminDeleteOrganization("o1")).rejects.toMatchObject({ code: "forbidden" });
   });
 });

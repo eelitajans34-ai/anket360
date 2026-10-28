@@ -1,11 +1,23 @@
 export type ID = string;
 
+export type AccountStatus = "aktif" | "donduruldu" | "engellendi";
+
 export interface User {
   id: ID;
   email: string;
   fullName: string;
   createdAt: string;
+  phone?: string;
+  status: AccountStatus;
+  /** Hesabı kim dondurdu: kullanıcı kendisi mi, platform yöneticisi mi */
+  frozenBy?: "kullanici" | "yonetici";
+  /** KVKK aydınlatma metni onay zamanı */
+  kvkkConsentAt?: string;
+  /** Platform (süper) yöneticisi mi */
+  isSuperAdmin?: boolean;
 }
+
+export type OrgStatus = "aktif" | "pasif" | "donduruldu" | "engellendi";
 
 export type OrgRole = "sahip" | "yonetici" | "uye";
 
@@ -20,6 +32,66 @@ export interface Organization {
   website?: string;
   ownerId: ID;
   createdAt: string;
+  planId: string;
+  status: OrgStatus;
+  /** Ücretli paketin bitiş zamanı (ücretsiz pakette yok) */
+  endsAt?: string;
+  adminNote?: string;
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  price: number;
+  periodDays: number;
+  /** Aynı anda yayında olabilecek anket sayısı (yoksa sınırsız) */
+  maxActiveSurveys: number | null;
+  description: string;
+  features: string[];
+  sort: number;
+  active: boolean;
+}
+
+export interface PaymentSettings {
+  bankName: string;
+  accountHolder: string;
+  iban: string;
+  note: string;
+}
+
+export type PaymentStatus = "beklemede" | "onaylandi" | "reddedildi";
+
+export interface Payment {
+  id: ID;
+  orgId: ID;
+  planId: string;
+  amount: number;
+  reference: string;
+  status: PaymentStatus;
+  note: string;
+  adminNote: string;
+  createdBy?: ID;
+  createdAt: string;
+  decidedAt?: string;
+}
+
+/** Genel eğilim: aynı standart soruya tüm anketlerde verilen yanıtların toplamı */
+export interface Benchmark {
+  total: number;
+  insufficient?: boolean;
+  options?: Array<{ label: string; count: number }>;
+  average?: number | null;
+}
+
+/** Süper yönetici listeleri */
+export interface AdminOrganization extends Organization {
+  ownerEmail: string;
+  ownerName: string;
+  memberCount: number;
+  surveyCount: number;
+}
+export interface AdminUser extends User {
+  organizations: Array<{ id: ID; name: string; role: OrgRole }>;
 }
 
 export interface Membership {
@@ -67,6 +139,8 @@ export interface Question {
   /** derecelendirme için en yüksek puan (3–10) */
   scaleMax?: number;
   showIf?: QuestionCondition;
+  /** Genel eğilim istatistiği için standart soru anahtarı */
+  statKey?: string;
 }
 
 export type SurveyStatus = "taslak" | "yayinda" | "kapali";
@@ -123,6 +197,8 @@ export interface SignUpInput {
   fullName: string;
   email: string;
   password: string;
+  /** KVKK aydınlatma metni onayı (zamanı veritabanında saklanır) */
+  kvkkConsent?: boolean;
 }
 
 export interface OrganizationInput {

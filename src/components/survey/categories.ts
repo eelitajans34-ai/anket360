@@ -65,10 +65,10 @@ export const CATEGORIES: Category[] = [
     sectors: ["Kamu / Belediye"],
     surveys: [
       hazir("belediye", "bel-memnuniyet", "Vatandaş memnuniyeti", "Belediye hizmetlerinden genel memnuniyet", () => [
-        puan("Belediyemizin hizmetlerinden genel olarak ne kadar memnunsunuz?"),
+        puan("Belediyemizin hizmetlerinden genel olarak ne kadar memnunsunuz?", { statKey: "belediye-memnuniyet" }),
         coklu("Son bir yılda hangi hizmetlerimizden yararlandınız?", ["Temizlik ve çöp toplama", "Toplu taşıma", "Park ve bahçeler", "Su ve kanalizasyon", "Zabıta", "Sosyal yardımlar", "Kültür ve sanat etkinlikleri", "Spor tesisleri"]),
-        secim("Sizce ilçemizin en önemli sorunu nedir?", ["Trafik ve ulaşım", "Altyapı ve yollar", "Temizlik", "Yeşil alan eksikliği", "Otopark", "Güvenlik", "İşsizlik", "Diğer"]),
-        puan("Belediyeye ulaşmak ve sorununuzu iletmek ne kadar kolay?"),
+        secim("Sizce ilçemizin en önemli sorunu nedir?", ["Trafik ve ulaşım", "Altyapı ve yollar", "Temizlik", "Yeşil alan eksikliği", "Otopark", "Güvenlik", "İşsizlik", "Diğer"], { statKey: "ilce-en-onemli-sorun" }),
+        puan("Belediyeye ulaşmak ve sorununuzu iletmek ne kadar kolay?", { statKey: "belediye-ulasilabilirlik" }),
         evetHayir("Son bir yılda belediyeye bir şikâyet ya da talep ilettiniz mi?"),
         mahalle(),
         yasGrubu(),
@@ -76,8 +76,8 @@ export const CATEGORIES: Category[] = [
       ], "Vatandaş Memnuniyet Anketi", "Görüşleriniz hizmetlerimizi iyileştirmemize yardımcı olacak. Anket yaklaşık 3 dakika sürer ve anonimdir."),
       hazir("belediye", "bel-mahalle", "Mahalle ihtiyaç analizi", "Mahallede neye ihtiyaç var?", () => [
         mahalle(),
-        coklu("Mahallenizde en çok neye ihtiyaç var?", ["Park ve oyun alanı", "Spor alanı", "Kreş", "Yol bakımı", "Sokak aydınlatması", "Otopark", "Kütüphane", "Sağlık hizmeti", "Toplu taşıma"]),
-        puan("Mahallenizde kendinizi ne kadar güvende hissediyorsunuz?"),
+        coklu("Mahallenizde en çok neye ihtiyaç var?", ["Park ve oyun alanı", "Spor alanı", "Kreş", "Yol bakımı", "Sokak aydınlatması", "Otopark", "Kütüphane", "Sağlık hizmeti", "Toplu taşıma"], { statKey: "mahalle-ihtiyac" }),
+        puan("Mahallenizde kendinizi ne kadar güvende hissediyorsunuz?", { statKey: "mahalle-guvenlik" }),
         puan("Mahallenizin temizliğinden ne kadar memnunsunuz?"),
         secim("Mahallenizde ne kadar süredir yaşıyorsunuz?", ["1 yıldan az", "1–5 yıl", "5–10 yıl", "10 yıldan fazla"]),
         yasGrubu(),
@@ -101,11 +101,11 @@ export const CATEGORIES: Category[] = [
     sectors: ["Siyasi Parti"],
     surveys: [
       hazir("siyasi", "sp-gundem", "Gündem ve öncelikler", "Vatandaşların öncelikli sorunları ve beklentileri", () => [
-        secim("Sizce ülkemizin en önemli sorunu nedir?", ["Ekonomi ve hayat pahalılığı", "İşsizlik", "Eğitim", "Sağlık", "Adalet ve hukuk", "Göç", "Çevre ve iklim", "Diğer"]),
-        secim("Sizce yaşadığınız şehrin en önemli sorunu nedir?", ["Ulaşım ve trafik", "Konut ve kira", "Altyapı", "İşsizlik", "Çevre ve temizlik", "Eğitim imkânları", "Sağlık hizmetleri", "Diğer"]),
-        secim("Oy verirken sizin için en önemli olan nedir?", ["Partinin programı ve vaatleri", "Aday", "Parti lideri", "Yerel hizmetler", "Ekonomi politikası", "Diğer"]),
-        secim("Bir sonraki seçimde oy vereceğiniz partiye karar verdiniz mi?", ["Evet, kararımı verdim", "Henüz karar vermedim", "Oy kullanmayı düşünmüyorum"]),
-        puan("Siyasetin sorunlarınızı çözebileceğine ne kadar inanıyorsunuz?"),
+        secim("Sizce ülkemizin en önemli sorunu nedir?", ["Ekonomi ve hayat pahalılığı", "İşsizlik", "Eğitim", "Sağlık", "Adalet ve hukuk", "Göç", "Çevre ve iklim", "Diğer"], { statKey: "ulke-en-onemli-sorun" }),
+        secim("Sizce yaşadığınız şehrin en önemli sorunu nedir?", ["Ulaşım ve trafik", "Konut ve kira", "Altyapı", "İşsizlik", "Çevre ve temizlik", "Eğitim imkânları", "Sağlık hizmetleri", "Diğer"], { statKey: "sehir-en-onemli-sorun" }),
+        secim("Oy verirken sizin için en önemli olan nedir?", ["Partinin programı ve vaatleri", "Aday", "Parti lideri", "Yerel hizmetler", "Ekonomi politikası", "Diğer"], { statKey: "oy-kriteri" }),
+        secim("Bir sonraki seçimde oy vereceğiniz partiye karar verdiniz mi?", ["Evet, kararımı verdim", "Henüz karar vermedim", "Oy kullanmayı düşünmüyorum"], { statKey: "oy-karari" }),
+        puan("Siyasetin sorunlarınızı çözebileceğine ne kadar inanıyorsunuz?", { statKey: "siyasete-guven" }),
         yasGrubu(),
         cinsiyet(),
         acik("Siyasetçilerden en çok ne bekliyorsunuz?"),
@@ -148,7 +148,7 @@ export const CATEGORIES: Category[] = [
         puan("Dernekle ilgili gelişmelerden ne kadar haberdar oluyorsunuz?"),
         coklu("Hangi faaliyetlerimize katıldınız?", ["Genel kurul", "Eğitim ve seminerler", "Sosyal etkinlikler", "Yardım kampanyaları", "Proje çalışmaları"]),
         secim("Bizden haberleri hangi yolla almak istersiniz?", ["E-posta", "WhatsApp", "SMS", "Sosyal medya", "İnternet sitesi"]),
-        evetHayir("Derneğimizi tanıdıklarınıza önerir misiniz?"),
+        evetHayir("Derneğimizi tanıdıklarınıza önerir misiniz?", { statKey: "stk-tavsiye" }),
         acik("Derneğimizin daha iyi olması için önerileriniz"),
       ], "Üye Memnuniyet Anketi", "Görüşleriniz derneğimizin çalışmalarını iyileştirmemize yardımcı olacak."),
       hazir("stk", "stk-gonullu", "Gönüllü geri bildirimi", "Gönüllülerin deneyimi ve beklentileri", () => [
@@ -162,7 +162,7 @@ export const CATEGORIES: Category[] = [
       hazir("stk", "stk-bagis", "Bağışçı anketi", "Bağışçıların beklentileri ve güveni", () => [
         secim("Ne sıklıkla bağış yapıyorsunuz?", ["İlk kez yaptım", "Yılda bir", "Birkaç ayda bir", "Her ay düzenli"]),
         puan("Bağışlarınızın nasıl kullanıldığı konusunda ne kadar bilgilendiriliyorsunuz?"),
-        puan("Kurumumuza ne kadar güveniyorsunuz?"),
+        puan("Kurumumuza ne kadar güveniyorsunuz?", { statKey: "stk-guven" }),
         secim("Bağış yaparken en çok hangi yolu tercih edersiniz?", ["Banka havalesi / EFT", "Kredi kartı", "Elden", "SMS ile bağış"]),
         coklu("Hangi alanlara bağış yapmak istersiniz?", ["Eğitim", "Sağlık", "Gıda yardımı", "Afet yardımı", "Hayvan hakları", "Çevre"]),
         acik("Bağışçı deneyimini iyileştirmek için önerileriniz"),

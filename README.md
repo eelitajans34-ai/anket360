@@ -32,6 +32,9 @@ npm run build      # tip denetimi + üretim derlemesi
 | `/sifre-yenile` | Şifre sıfırlama e-postasındaki bağlantının açtığı sayfa |
 | `/davet/:kod` | Ekip davetini kabul etme |
 | `/a/:id` | Herkese açık anket — katılımcılar giriş yapmadan yanıtlar |
+| `/anketler` | Kategoriler ve hazır anketler |
+| `/panel/abonelik` | Paket, IBAN ile ödeme bildirimi, ödeme geçmişi |
+| `/yonetim` | Süper yönetici paneli: kurumlar, kullanıcılar, ödemeler, paketler, ödeme bilgileri |
 
 ## Veri katmanı
 - `.env` içinde Supabase bilgileri varsa veriler **Supabase**'te tutulur.

@@ -1,10 +1,14 @@
 import { Link } from "react-router-dom";
 import {
-  BarChart3, Building2, Check, ClipboardList, Globe2, GraduationCap, HeartPulse,
-  LayoutTemplate, Lock, Send, ShoppingBag, Smartphone, Star, Users,
+  BarChart3, Check, 
+  LayoutTemplate, Lock, Send, Smartphone, Star, Users,
 } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { CATEGORIES } from "@/components/survey/categories";
+import { db } from "@/lib/data";
+import { DEFAULT_PLANS, formatTL } from "@/lib/platform";
+import { useAsync } from "@/lib/use-async";
 
 const FEATURES = [
   { icon: LayoutTemplate, title: "Hazır anketler", text: "Belediye, siyasi parti, STK ve işletmeler için hazır sorularla dakikalar içinde başlayın." },
@@ -21,23 +25,10 @@ const STEPS = [
   { n: 3, title: "Sonuçları analiz edin", text: "Gelen yanıtları panelden anlık izleyin, raporları dışa aktarın." },
 ];
 
-const USE_CASES = [
-  { icon: Globe2, title: "Belediyeler", text: "Vatandaş memnuniyeti, mahalle ihtiyaçları ve etkinlik değerlendirmesi." },
-  { icon: ClipboardList, title: "Siyasi Partiler", text: "Gündem ve öncelikler, üye ve gönüllü görüşleri, proje desteği — anonim olarak." },
-  { icon: HeartPulse, title: "STK ve Dernekler", text: "Üye memnuniyeti, gönüllü ve bağışçı anketleri, eğitim değerlendirmesi." },
-  { icon: ShoppingBag, title: "İşletmeler", text: "Müşteri memnuniyeti, çalışan memnuniyeti, ürün ve hizmet geri bildirimi." },
-  { icon: GraduationCap, title: "Eğitim Kurumları", text: "Öğrenci, veli ve eğitim değerlendirme anketleri." },
-  { icon: Building2, title: "Herkes İçin", text: "Etkinlikler ve her türlü görüş toplama için genel anketler." },
-];
 
-const PLANS = [
-  { name: "Başlangıç", price: "0", period: "sonsuza kadar", desc: "Küçük ekipler ve denemeler için.", features: ["3 aktif anket", "Anket başına 100 yanıt", "Temel raporlar", "1 kullanıcı"], cta: "Ücretsiz başla", highlight: false },
-  { name: "Profesyonel", price: "499", period: "/ ay", desc: "Büyüyen kurumlar için.", features: ["Sınırsız anket", "Aylık 10.000 yanıt", "Gelişmiş raporlar ve dışa aktarma", "10 kullanıcı", "Kurum logosu ile marka"], cta: "14 gün ücretsiz dene", highlight: true },
-  { name: "Kurumsal", price: "Teklif", period: "", desc: "Büyük ölçekli ihtiyaçlar için.", features: ["Sınırsız yanıt ve kullanıcı", "Tek oturum açma (SSO)", "Özel sunucu seçeneği", "Öncelikli destek", "Sözleşmeli SLA"], cta: "Bize ulaşın", highlight: false },
-];
 
 const FAQ = [
-  { q: "Anket360'ı kullanmak ücretli mi?", a: "Hayır, Başlangıç paketiyle ücretsiz kullanmaya başlayabilirsiniz. İhtiyacınız büyüdükçe paketinizi yükseltebilirsiniz." },
+  { q: "Anket360'ı kullanmak ücretli mi?", a: "Başlangıç paketi ücretsizdir; aynı anda 3 anket yayınlayabilirsiniz. Daha fazlası için paketinizi panelden havale/EFT ile yükseltebilirsiniz." },
   { q: "Verilerim nerede saklanıyor?", a: "Verileriniz şifrelenmiş olarak güvenli sunucularda saklanır ve KVKK hükümlerine uygun şekilde işlenir." },
   { q: "Anonim anket oluşturabilir miyim?", a: "Evet. Anket ayarlarından anonim modu açtığınızda katılımcıların kimlik bilgileri kaydedilmez." },
   { q: "Ekibimi nasıl eklerim?", a: "Yönetim panelindeki Kurum sayfasından ekip arkadaşlarınızı Yönetici veya Üye rolüyle davet edebilirsiniz." },
@@ -45,6 +36,9 @@ const FAQ = [
 ];
 
 export default function HomePage() {
+  // Fiyatlar veritabanından (süper yönetici değiştirebilir); yüklenemezse varsayılanlar
+  const { data: plans } = useAsync(() => db.listPlans().then((p) => p.filter((x) => x.active)), []);
+  const shownPlans = plans?.length ? plans : DEFAULT_PLANS;
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <SiteHeader />
@@ -121,18 +115,19 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Kullanım alanları */}
+        {/* Kimler için — hazır anket kategorileri */}
         <section className="mx-auto max-w-6xl px-4 py-20">
-          <SectionTitle eyebrow="Kimler İçin?" title="Her kesime uygun hazır anketler" />
-          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {USE_CASES.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="flex gap-4 rounded-xl border border-slate-200 p-5">
-                <Icon className="h-6 w-6 shrink-0 text-brand-600" />
-                <div>
-                  <h3 className="font-semibold">{title}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{text}</p>
-                </div>
-              </div>
+          <SectionTitle eyebrow="Kimler İçin?" title="Her kesime uygun hazır anketler" text="Alanınızı seçin; sorular hazır gelsin. Dilediğiniz gibi değiştirebilirsiniz." />
+          <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {CATEGORIES.map((c) => (
+              <Link key={c.id} to={`/anketler#${c.id}`} className="card group flex flex-col p-5 transition hover:-translate-y-0.5 hover:border-brand-400 hover:shadow-md">
+                <span className="text-4xl" aria-hidden>{c.emoji}</span>
+                <h3 className="mt-3 font-semibold">{c.name}</h3>
+                <ul className="mt-2 flex-1 space-y-1 text-sm text-slate-600">
+                  {c.surveys.slice(0, 3).map((s) => <li key={s.id}>• {s.name}</li>)}
+                </ul>
+                <span className="mt-4 text-sm font-medium text-brand-600 group-hover:underline">{c.surveys.length} hazır anket →</span>
+              </Link>
             ))}
           </div>
         </section>
@@ -140,25 +135,28 @@ export default function HomePage() {
         {/* Fiyatlar */}
         <section id="fiyatlar" className="scroll-mt-20 bg-slate-50 py-20">
           <div className="mx-auto max-w-6xl px-4">
-            <SectionTitle eyebrow="Fiyatlar" title="Kurumunuza uygun paketi seçin" text="Fiyatlara KDV dahil değildir. İstediğiniz zaman iptal edebilirsiniz." />
+            <SectionTitle eyebrow="Fiyatlar" title="Kurumunuza uygun paketi seçin" text="Ödemeler havale/EFT ile yapılır. Fiyatlara KDV dahil değildir." />
             <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {PLANS.map((p) => (
-                <div key={p.name} className={`card relative flex flex-col p-7 ${p.highlight ? "border-brand-500 ring-2 ring-brand-500" : ""}`}>
-                  {p.highlight && <span className="absolute -top-3 left-7 rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">En popüler</span>}
+              {shownPlans.map((p) => {
+                const highlight = p.id === "profesyonel";
+                return (
+                <div key={p.id} className={`card relative flex flex-col p-7 ${highlight ? "border-brand-500 ring-2 ring-brand-500" : ""}`}>
+                  {highlight && <span className="absolute -top-3 left-7 rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">En popüler</span>}
                   <h3 className="text-lg font-semibold">{p.name}</h3>
-                  <p className="mt-1 text-sm text-slate-500">{p.desc}</p>
+                  <p className="mt-1 text-sm text-slate-500">{p.description}</p>
                   <p className="mt-5 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold">{p.price === "Teklif" ? "Teklif" : `₺${p.price}`}</span>
-                    <span className="text-sm text-slate-500">{p.period}</span>
+                    <span className="text-4xl font-extrabold">{p.price === 0 ? "Ücretsiz" : formatTL(p.price)}</span>
+                    <span className="text-sm text-slate-500">{p.price === 0 ? "" : p.periodDays === 30 ? "/ ay" : `/ ${p.periodDays} gün`}</span>
                   </p>
                   <ul className="mt-6 flex-1 space-y-3">
                     {p.features.map((f) => (
                       <li key={f} className="flex items-start gap-2 text-sm text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />{f}</li>
                     ))}
                   </ul>
-                  <Link to="/kayit" className={`mt-8 ${p.highlight ? "btn-primary" : "btn-secondary"}`}>{p.cta}</Link>
+                  <Link to="/kayit" className={`mt-8 ${highlight ? "btn-primary" : "btn-secondary"}`}>{p.price === 0 ? "Ücretsiz başla" : "Hemen başla"}</Link>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
@@ -204,30 +202,27 @@ function SectionTitle({ eyebrow, title, text, dark }: { eyebrow: string; title: 
 }
 
 function HeroPreview() {
+  const tiles = [
+    { c: "belediye", bg: "from-sky-500 to-blue-700", stat: "%79", text: "vatandaş hizmetlerden memnun" },
+    { c: "siyasi", bg: "from-rose-500 to-red-700", stat: "%54", text: "\"ekonomi\" en önemli sorun dedi" },
+    { c: "stk", bg: "from-amber-400 to-orange-600", stat: "%88", text: "üye derneği tavsiye ediyor" },
+    { c: "isletme", bg: "from-emerald-500 to-teal-700", stat: "+42", text: "müşteri tavsiye skoru (NPS)" },
+  ];
   return (
-    <div className="relative mx-auto w-full max-w-md" aria-hidden>
-      <div className="absolute -inset-4 -z-10 rounded-3xl bg-brand-200/40 blur-2xl" />
-      <div className="card p-6 shadow-xl">
-        <p className="text-xs font-semibold text-brand-600">Çalışan Memnuniyeti 2026</p>
-        <p className="mt-2 font-semibold">Şirketimizi bir arkadaşınıza önerme olasılığınız nedir?</p>
-        <div className="mt-4 grid grid-cols-11 gap-1">
-          {Array.from({ length: 11 }, (_, i) => (
-            <span key={i} className={`flex h-8 items-center justify-center rounded text-xs font-medium ${i === 9 ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600"}`}>{i}</span>
-          ))}
-        </div>
-        <div className="mt-6 space-y-2">
-          {[["Çok memnunum", 62], ["Memnunum", 28], ["Kararsızım", 10]].map(([l, v]) => (
-            <div key={l as string}>
-              <div className="flex justify-between text-xs text-slate-600"><span>{l}</span><span>%{v}</span></div>
-              <div className="mt-1 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand-500" style={{ width: `${v}%` }} /></div>
-            </div>
-          ))}
-        </div>
-        <div className="mt-6 flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
-          <span className="text-sm text-emerald-800">NPS Skoru</span>
-          <span className="text-2xl font-extrabold text-emerald-700">+54</span>
-        </div>
-      </div>
+    <div className="relative mx-auto grid w-full max-w-md grid-cols-2 gap-4" aria-hidden>
+      <div className="absolute -inset-6 -z-10 rounded-3xl bg-brand-200/40 blur-2xl" />
+      <p className="col-span-2 -mb-1 text-right text-[11px] text-slate-400">Örnek sonuçlar</p>
+      {tiles.map((t, i) => {
+        const cat = CATEGORIES.find((c) => c.id === t.c)!;
+        return (
+          <div key={t.c} className={`rounded-2xl bg-gradient-to-br ${t.bg} p-5 text-white shadow-lg ${i % 2 ? "translate-y-6" : ""}`}>
+            <span className="text-3xl">{cat.emoji}</span>
+            <p className="mt-2 text-sm font-semibold opacity-90">{cat.name}</p>
+            <p className="mt-4 text-3xl font-extrabold">{t.stat}</p>
+            <p className="text-xs opacity-90">{t.text}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }

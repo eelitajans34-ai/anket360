@@ -1,11 +1,19 @@
 import type {
+  AdminOrganization,
+  AdminUser,
+  AccountStatus,
   Answers,
+  Benchmark,
   ID,
   Invitation,
   Membership,
   Organization,
   OrganizationInput,
   OrgRole,
+  OrgStatus,
+  Payment,
+  PaymentSettings,
+  Plan,
   PublicSurvey,
   SignUpInput,
   Survey,
@@ -31,7 +39,12 @@ export interface DataStore {
   updatePassword(newPassword: string): Promise<void>;
   /** Oturum dışarıdan değiştiğinde (başka sekme, token yenileme) haber verir. */
   onAuthChange?(cb: () => void): () => void;
-  updateProfile(userId: ID, patch: Partial<Pick<User, "fullName">>): Promise<User>;
+  updateProfile(userId: ID, patch: Partial<Pick<User, "fullName" | "phone">>): Promise<User>;
+  /** Hesabı dondurur (kullanıcı tekrar giriş yapıp açabilir) */
+  freezeMyAccount(): Promise<void>;
+  reactivateMyAccount(): Promise<void>;
+  /** Hesabı ve sahibi olunan kurumları kalıcı olarak siler (KVKK silme hakkı) */
+  deleteMyAccount(): Promise<void>;
 
   // Kurumlar
   createOrganization(userId: ID, input: OrganizationInput): Promise<Organization>;
@@ -60,6 +73,26 @@ export interface DataStore {
   duplicateSurvey(id: ID, userId: ID): Promise<Survey>;
   deleteSurvey(id: ID): Promise<void>;
   listResponses(surveyId: ID): Promise<SurveyResponse[]>;
+
+  // Abonelik ve ödeme
+  listPlans(): Promise<Plan[]>;
+  getPaymentSettings(): Promise<PaymentSettings>;
+  createPayment(orgId: ID, planId: string, note: string): Promise<Payment>;
+  listPayments(orgId?: ID): Promise<Payment[]>;
+
+  /** Genel eğilim istatistiği (en az 10 yanıt yoksa insufficient) */
+  getBenchmark(statKey: string): Promise<Benchmark>;
+
+  // Süper yönetici
+  adminListOrganizations(): Promise<AdminOrganization[]>;
+  adminUpdateOrganization(orgId: ID, patch: { status?: OrgStatus; planId?: string; endsAt?: string | null; adminNote?: string }): Promise<void>;
+  adminDeleteOrganization(orgId: ID): Promise<void>;
+  adminListUsers(): Promise<AdminUser[]>;
+  adminSetUserStatus(userId: ID, status: AccountStatus): Promise<void>;
+  adminDeleteUser(userId: ID): Promise<void>;
+  adminDecidePayment(paymentId: ID, approve: boolean, note?: string): Promise<void>;
+  adminUpdatePlan(plan: Plan): Promise<void>;
+  adminUpdatePaymentSettings(s: PaymentSettings): Promise<void>;
 
   // Katılımcı (giriş gerektirmez)
   /** Taslak veya olmayan anket için null döner. */
