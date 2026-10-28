@@ -142,24 +142,37 @@ jobs:
       - name: Kimlik doğrulama ayarları (adresler, Türkçe e-postalar)
         if: steps.ayar.outputs.hazir == 'true'
         run: |
+          api="https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth"
+          patch() {
+            curl -sS -o /tmp/yanit.json -w '%{http_code}' -X PATCH "$api" \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$1"
+          }
+
+          # 1) Zorunlu: site ve yönlendirme adresleri
           body=$(jq -n --arg site "$SITE_URL" '{
             site_url: $site,
             uri_allow_list: ([$site + "/**", "http://localhost:5173/**"] | join(",")),
-            mailer_autoconfirm: false,
+            mailer_autoconfirm: false
+          }')
+          code=$(patch "$body")
+          if [ "$code" -ge 300 ]; then
+            echo "::error title=Kimlik doğrulama adresleri ayarlanamadı (HTTP $code)::$(head -c 600 /tmp/yanit.json | tr '\n' ' ')"; exit 1
+          fi
+          echo "Site adresi: $SITE_URL"
+
+          # 2) İsteğe bağlı: Türkçe e-posta şablonları (ücretsiz planda özel SMTP gerektirir)
+          body=$(jq -n '{
             mailer_subjects_confirmation: "Anket360 hesabınızı doğrulayın",
             mailer_templates_confirmation_content: "<h2>Anket360’a hoş geldiniz</h2><p>Hesabınızı etkinleştirmek için aşağıdaki bağlantıya tıklayın:</p><p><a href=\"{{ .ConfirmationURL }}\">E-posta adresimi doğrula</a></p><p>Bu kaydı siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>",
             mailer_subjects_recovery: "Anket360 şifre sıfırlama",
             mailer_templates_recovery_content: "<h2>Şifre sıfırlama</h2><p>Yeni şifre belirlemek için aşağıdaki bağlantıya tıklayın:</p><p><a href=\"{{ .ConfirmationURL }}\">Şifremi sıfırla</a></p><p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>"
           }')
-          code=$(curl -sS -o /tmp/yanit.json -w '%{http_code}' -X PATCH \
-            "https://api.supabase.com/v1/projects/$PROJECT_REF/config/auth" \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d "$body")
+          code=$(patch "$body")
           if [ "$code" -ge 300 ]; then
-            echo "::error title=Kimlik doğrulama ayarları yapılamadı (HTTP $code)::$(head -c 600 /tmp/yanit.json | tr '\n' ' ')"; exit 1
+            echo "::warning title=Türkçe e-posta şablonları uygulanamadı::Supabase varsayılan (İngilizce) e-postaları kullanılacak. Ücretsiz planda şablon değişikliği için özel SMTP tanımlanmalı. Yanıt: $(head -c 300 /tmp/yanit.json | tr '\n' ' ')"
+          else
+            echo "Türkçe e-posta şablonları uygulandı."
           fi
-          echo "Site adresi: $SITE_URL"
 
   yayin:
     name: GitHub Pages yayını
