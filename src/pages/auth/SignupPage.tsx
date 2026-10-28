@@ -5,7 +5,7 @@ import { AuthLayout } from "./AuthLayout";
 import { Alert, TextField } from "@/components/ui/Field";
 import { PasswordField, PasswordStrength } from "@/components/ui/PasswordField";
 import { useAuth } from "@/lib/auth";
-import { isValidEmail, passwordIssues } from "@/lib/utils";
+import { isValidEmail, passwordIssues, safeRedirect } from "@/lib/utils";
 
 type Errors = Partial<Record<"fullName" | "email" | "password" | "confirm" | "kvkk", string>>;
 
@@ -13,7 +13,7 @@ export default function SignupPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from;
+  const from = safeRedirect((location.state as { from?: string } | null)?.from, "/kurum/olustur");
   const [confirmSentTo, setConfirmSentTo] = useState<string | null>(null);
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirm: "", kvkk: false });
   const [errors, setErrors] = useState<Errors>({});
@@ -43,7 +43,7 @@ export default function SignupPage() {
     try {
       const user = await signUp({ fullName: form.fullName, email: form.email, password: form.password });
       if (!user) setConfirmSentTo(form.email.trim().toLowerCase());
-      else navigate(from ?? "/kurum/olustur", { replace: true });
+      else navigate(from, { replace: true });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Kayıt oluşturulamadı.");
     } finally {

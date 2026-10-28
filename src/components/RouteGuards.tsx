@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
+import { safeRedirect } from "@/lib/utils";
 
 export function FullPageSpinner() {
   return (
@@ -30,6 +31,6 @@ export function GuestOnly() {
   const { loading, user } = useAuth();
   const location = useLocation();
   if (loading) return <FullPageSpinner />;
-  if (user) return <Navigate to={(location.state as { from?: string } | null)?.from ?? "/panel"} replace />;
+  if (user) return <Navigate to={safeRedirect((location.state as { from?: string } | null)?.from, "/panel")} replace />;
   return <Outlet />;
 }

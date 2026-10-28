@@ -4,13 +4,13 @@ import { AuthLayout } from "./AuthLayout";
 import { Alert, TextField } from "@/components/ui/Field";
 import { PasswordField } from "@/components/ui/PasswordField";
 import { useAuth } from "@/lib/auth";
-import { isValidEmail } from "@/lib/utils";
+import { isValidEmail, safeRedirect } from "@/lib/utils";
 
 export default function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/panel";
+  const from = safeRedirect((location.state as { from?: string } | null)?.from, "/panel");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);

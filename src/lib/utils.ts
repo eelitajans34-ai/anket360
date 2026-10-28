@@ -6,6 +6,17 @@ export function appUrl(path: string): string {
   return `${window.location.origin}${base}${path}`;
 }
 
+/**
+ * Giriş sonrası yönlendirme adresi yalnızca uygulama içi bir yol olabilir.
+ * "//site", "/\\site", "https://…" gibi dış adreslere yönlendirmeyi engeller.
+ */
+export function safeRedirect(path: unknown, fallback: string): string {
+  if (typeof path !== "string" || !path.startsWith("/") || path.startsWith("//") || path.includes("\\") || /[\u0000-\u001f]/.test(path)) {
+    return fallback;
+  }
+  return path;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }

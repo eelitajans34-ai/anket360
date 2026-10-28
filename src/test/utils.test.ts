@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initials, isValidEmail, passwordIssues, slugify } from "@/lib/utils";
+import { initials, isValidEmail, passwordIssues, safeRedirect, slugify } from "@/lib/utils";
 
 describe("yardımcılar", () => {
   it("Türkçe karakterleri slug'a çevirir", () => {
@@ -21,5 +21,12 @@ describe("yardımcılar", () => {
 
   it("baş harfleri Türkçe kurallarla büyütür", () => {
     expect(initials("ilknur şahin")).toBe("İŞ");
+  });
+
+  it("yalnızca uygulama içi yönlendirmeye izin verir", () => {
+    expect(safeRedirect("/davet/abc", "/panel")).toBe("/davet/abc");
+    for (const kotu of ["//evil.com", "/\\evil.com", "/panel\\..\\x", "https://evil.com", "evil.com", "/a\nb", undefined, 42]) {
+      expect(safeRedirect(kotu, "/panel")).toBe("/panel");
+    }
   });
 });

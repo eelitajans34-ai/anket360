@@ -13,14 +13,16 @@
     "test:rls": "node supabase/tests/rls-kontrol.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.6",
+    "@supabase/supabase-js": "^2.118.0",
     "clsx": "^2.1.1",
-    "fflate": "^0.8.2",
+    "dejavu-fonts-ttf": "^2.37.3",
+    "fflate": "^0.8.3",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.460.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.28.0"
+    "react-router-dom": "^6.30.6"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.0",
