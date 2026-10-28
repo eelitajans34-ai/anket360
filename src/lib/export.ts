@@ -1,4 +1,3 @@
-import { strToU8, zipSync } from "fflate";
 import type { AnswerValue, Question, SurveyResponse } from "./types";
 
 /** Yanıtları tablo satırlarına çevirir: ilk satır başlık. */
@@ -53,7 +52,9 @@ function colName(i: number): string {
  * Tek sayfalı, başlığı kalın ve sabitlenmiş en küçük geçerli .xlsx dosyası.
  * Metinler inlineStr hücresidir; Excel bunları formül olarak çalıştırmaz (safeText gerekmez).
  */
-export function toXlsx(rows: Array<Array<string | number>>, sheetName = "Yanıtlar"): Uint8Array {
+export async function toXlsx(rows: Array<Array<string | number>>, sheetName = "Yanıtlar"): Promise<Uint8Array> {
+  // Excel paketi yalnızca dışa aktarırken yüklenir
+  const { strToU8, zipSync } = await import("fflate");
   const sheetRows = rows
     .map((r, ri) => {
       const cells = r

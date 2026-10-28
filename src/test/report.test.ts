@@ -89,8 +89,8 @@ describe("dışa aktarma", () => {
     expect(csv).toContain('"Çok iyi; teşekkürler\nikinci satır"');
   });
 
-  it("geçerli bir xlsx paketi üretir", () => {
-    const files = unzipSync(new Uint8Array(toXlsx(responseRows(qs, rs), "Yemekhane: Ekim/2026")));
+  it("geçerli bir xlsx paketi üretir", async () => {
+    const files = unzipSync(new Uint8Array(await toXlsx(responseRows(qs, rs), "Yemekhane: Ekim/2026")));
     expect(Object.keys(files).sort()).toEqual([
       "[Content_Types].xml", "_rels/.rels", "xl/_rels/workbook.xml.rels", "xl/styles.xml", "xl/workbook.xml", "xl/worksheets/sheet1.xml",
     ]);

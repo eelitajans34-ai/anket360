@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { Check, Copy, Download, ExternalLink, Mail, MessageCircle, X } from "lucide-react";
 import { appUrl } from "@/lib/utils";
 
@@ -15,7 +14,8 @@ export function ShareDialog({ surveyId, title, onClose }: { surveyId: string; ti
 
   useEffect(() => {
     let alive = true;
-    QRCode.toDataURL(link, { width: 512, margin: 2, errorCorrectionLevel: "M", color: { dark: "#0f172a", light: "#ffffff" } })
+    import("qrcode")
+      .then(({ default: QRCode }) => QRCode.toDataURL(link, { width: 512, margin: 2, errorCorrectionLevel: "M", color: { dark: "#0f172a", light: "#ffffff" } }))
       .then((url) => alive && setQr(url))
       .catch(() => alive && setQr(null));
     return () => { alive = false; };

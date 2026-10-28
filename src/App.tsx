@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet, RouterProvider, type RouteObject } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
-import { GuestOnly, RequireAuth, RequireOrg } from "@/components/RouteGuards";
+import { lazy, Suspense } from "react";
+import { FullPageSpinner, GuestOnly, RequireAuth, RequireOrg } from "@/components/RouteGuards";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
@@ -9,13 +10,23 @@ import CreateOrgPage from "@/pages/CreateOrgPage";
 import PanelLayout from "@/pages/panel/PanelLayout";
 import DashboardPage from "@/pages/panel/DashboardPage";
 import SurveysPage from "@/pages/panel/SurveysPage";
-import SurveyBuilderPage from "@/pages/panel/SurveyBuilderPage";
 import OrgSettingsPage from "@/pages/panel/OrgSettingsPage";
 import ProfilePage from "@/pages/panel/ProfilePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import InvitePage from "@/pages/InvitePage";
 import PublicSurveyPage from "@/pages/PublicSurveyPage";
+
+// Anket düzenleyici (rapor, grafikler, paylaşım) ayrı dosyada; ilk açılışta yüklenmez
+const SurveyBuilderPage = lazy(() => import("@/pages/panel/SurveyBuilderPage"));
+
+function Builder({ isNew }: { isNew?: boolean }) {
+  return (
+    <Suspense fallback={<FullPageSpinner />}>
+      <SurveyBuilderPage key={isNew ? "yeni" : undefined} />
+    </Suspense>
+  );
+}
 
 function Root() {
   return (
@@ -54,8 +65,8 @@ export const routes: RouteObject[] = [
                 children: [
                   { index: true, element: <DashboardPage /> },
                   { path: "anketler", element: <SurveysPage /> },
-                  { path: "anketler/yeni", element: <SurveyBuilderPage key="yeni" /> },
-                  { path: "anketler/:id/duzenle", element: <SurveyBuilderPage /> },
+                  { path: "anketler/yeni", element: <Builder isNew /> },
+                  { path: "anketler/:id/duzenle", element: <Builder /> },
                   { path: "kurum", element: <OrgSettingsPage /> },
                   { path: "profil", element: <ProfilePage /> },
                 ],

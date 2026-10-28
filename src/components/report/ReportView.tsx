@@ -23,11 +23,11 @@ export function ReportView({ surveyId, title, questions }: { surveyId: string; t
   const last = responses.reduce<string | null>((m, r) => (!m || r.createdAt > m ? r.createdAt : m), null);
   const nps = reports.find((r): r is Extract<QuestionReport, { kind: "nps" }> => r.kind === "nps" && r.score !== null);
 
-  function exportAs(kind: "csv" | "xlsx") {
+  async function exportAs(kind: "csv" | "xlsx") {
     const rows = responseRows(questions, responses);
     const name = fileBaseName(title);
     if (kind === "csv") download(toCsv(rows), `${name}.csv`, "text/csv;charset=utf-8");
-    else download(toXlsx(rows), `${name}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    else download(await toXlsx(rows), `${name}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   }
 
   if (loading) return <p className="card p-8 text-center text-sm text-slate-500">Rapor hazırlanıyor…</p>;
