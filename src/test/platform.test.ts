@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { formatIban, isValidIban, orgRestriction, orgUsable } from "@/lib/platform";
+import { formatIban, isValidIban, maskIban, maskName, orgRestriction, orgUsable } from "@/lib/platform";
 import { LocalStore } from "@/lib/data/local-store";
 import type { SurveyInput } from "@/lib/types";
 
@@ -9,6 +9,11 @@ describe("platform kuralları", () => {
     expect(isValidIban("TR330006100519786457841327")).toBe(false); // sağlama hatası
     expect(isValidIban("DE89370400440532013000")).toBe(false);
     expect(formatIban("TR330006100519786457841326")).toBe("TR33 0006 1005 1978 6457 8413 26");
+  });
+  it("IBAN ve adı maskeler", () => {
+    expect(maskIban("TR74 0001 0000 0000 0000 0000 5003")).toBe("TR74 •••• •••• •••• •••• •••• 5003");
+    expect(maskName("Mustafa Subaşı")).toBe("M•••••• S•••••");
+    expect(maskName("  Ali   Veli ")).toBe("A•• V•••");
   });
   it("kurum kısıtlamalarını açıklar", () => {
     expect(orgUsable({ status: "aktif" })).toBe(true);

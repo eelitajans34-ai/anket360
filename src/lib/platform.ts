@@ -62,3 +62,50 @@ export function isValidIban(raw: string): boolean {
   for (const ch of digits) rem = (rem * 10 + Number(ch)) % 97;
   return rem === 1;
 }
+
+/** IBAN'ı maskeler: ilk 4 ve son 4 karakter görünür. "TR74 •••• •••• •••• •••• •••• 5003" */
+export function maskIban(raw: string): string {
+  const iban = raw.replace(/\s+/g, "").toUpperCase();
+  if (iban.length <= 8) return iban;
+  const hidden = Math.ceil((iban.length - 8) / 4);
+  return [iban.slice(0, 4), ...Array.from({ length: hidden }, () => "••••"), iban.slice(-4)].join(" ");
+}
+
+/** Adı maskeler: her kelimenin yalnız ilk harfi görünür. "Mustafa Subaşı" → "M•••••• S•••••" */
+export function maskName(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w[0] + "•".repeat(Math.max(1, w.length - 1)))
+    .join(" ");
+}
+
+/**
+ * Metni panoya kopyalar. Clipboard API yoksa ya da izin verilmezse eski yöntemi dener.
+ * Başarılıysa true döner.
+ */
+export async function copyText(text: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // aşağıdaki yönteme düş
+  }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand?.("copy") ?? false;
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
+}

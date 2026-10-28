@@ -6,7 +6,7 @@ import { FullPageSpinner } from "@/components/RouteGuards";
 import { useAuth } from "@/lib/auth";
 import { db } from "@/lib/data";
 import { PAYMENT_METHODS, type PaymentMethodId, type PaymentMethodInfo } from "@/lib/payments/methods";
-import { formatIban, formatTL } from "@/lib/platform";
+import { copyText, formatTL, maskIban, maskName } from "@/lib/platform";
 import type { Payment, PaymentSettings, Plan } from "@/lib/types";
 import { useAsync } from "@/lib/use-async";
 import { cn } from "@/lib/utils";
@@ -152,14 +152,14 @@ function MethodOption({ m, selected, onSelect }: { m: PaymentMethodInfo; selecte
 function MethodPanel({ method, plan, bank, orgName }: { method: PaymentMethodId; plan: Plan; bank: PaymentSettings; orgName: string }) {
   const info = PAYMENT_METHODS.find((m) => m.id === method)!;
   const [copied, setCopied] = useState<string | null>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
   const aciklama = `${orgName} - ${plan.name}`;
   async function copy(text: string, key: string) {
-    try {
-      await navigator.clipboard.writeText(text);
+    const ok = await copyText(text);
+    setCopyFailed(!ok);
+    if (ok) {
       setCopied(key);
       setTimeout(() => setCopied(null), 2000);
-    } catch {
-      // pano erişimi yoksa kullanıcı elle kopyalar
     }
   }
   const Row = ({ label, value, copyValue, k, mono }: { label: string; value: string; copyValue?: string; k: string; mono?: boolean }) => (
@@ -168,8 +168,13 @@ function MethodPanel({ method, plan, bank, orgName }: { method: PaymentMethodId;
       <dd className={cn("flex items-center gap-2 text-right text-sm font-semibold", mono && "font-mono")}>
         {value}
         {copyValue !== undefined && (
-          <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={`${label} kopyala`} onClick={() => copy(copyValue, k)}>
-            {copied === k ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+          <button
+            type="button"
+            className={cn("inline-flex items-center gap-1 rounded px-1.5 py-1 font-sans text-xs font-medium", copied === k ? "text-emerald-700" : "text-slate-500 hover:bg-slate-100 hover:text-slate-800")}
+            aria-label={`${label} kopyala`}
+            onClick={() => copy(copyValue, k)}
+          >
+            {copied === k ? <><Check className="h-4 w-4" />Kopyalandı</> : <><Copy className="h-4 w-4" />Kopyala</>}
           </button>
         )}
       </dd>
@@ -191,12 +196,15 @@ function MethodPanel({ method, plan, bank, orgName }: { method: PaymentMethodId;
           {info.hint && <p className="mt-2 text-xs text-slate-500">{info.hint}</p>}
           <dl className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-slate-50 px-4">
             <Row label="Banka" value={bank.bankName} k="banka" />
-            <Row label="Alıcı" value={bank.accountHolder} copyValue={bank.accountHolder} k="alici" />
-            <Row label="IBAN" value={formatIban(bank.iban)} copyValue={bank.iban} k="iban" mono />
+            {/* IBAN ve alıcı ekranda maskeli; kopyala düğmesi tam bilgiyi kopyalar */}
+            <Row label="Alıcı" value={maskName(bank.accountHolder)} copyValue={bank.accountHolder} k="alici" />
+            <Row label="IBAN" value={maskIban(bank.iban)} copyValue={bank.iban} k="iban" mono />
             <Row label="Tutar" value={formatTL(plan.price)} copyValue={String(plan.price)} k="tutar" />
             <Row label="Açıklama" value={aciklama} copyValue={aciklama} k="aciklama" />
           </dl>
-          {bank.note && <p className="mt-3 text-xs text-slate-500">{bank.note}</p>}
+          <p className="mt-3 text-xs text-slate-500">Güvenliğiniz için IBAN ve alıcı adı kısmen gizlenmiştir. <strong>Kopyala</strong> düğmesi tam bilgiyi kopyalar; banka uygulamanıza yapıştırdığınızda eksiksiz görünür.</p>
+          {copyFailed && <div className="mt-3"><Alert>Tarayıcınız kopyalamaya izin vermedi. Tarayıcı ayarlarından pano iznini açın ya da farklı bir tarayıcı deneyin.</Alert></div>}
+          {bank.note && <p className="mt-2 text-xs text-slate-500">{bank.note}</p>}
         </>
       )}
     </section>

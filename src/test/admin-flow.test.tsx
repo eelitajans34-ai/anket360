@@ -66,7 +66,16 @@ describe("Süper yönetici ve abonelik akışı", () => {
     expect(screen.getByRole("radio", { name: /Kredi \/ Banka kartı/ })).toBeDisabled();
     await user.click(screen.getByRole("radio", { name: /FAST/ }));
     expect(screen.getByRole("heading", { name: "2. FAST ile ödeme" })).toBeInTheDocument();
-    expect(screen.getByText("TR33 0006 1005 1978 6457 8413 26")).toBeInTheDocument();
+    // IBAN ve alıcı maskeli görünür; kopyala tam bilgiyi kopyalar
+    expect(screen.getByText("TR33 •••• •••• •••• •••• •••• 1326")).toBeInTheDocument();
+    expect(screen.getByText("A••••••• L•••")).toBeInTheDocument();
+    expect(screen.queryByText(/TR330006100519786457841326|0006 1005/)).not.toBeInTheDocument();
+    const yazilan: string[] = [];
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t: string) => { yazilan.push(t); } }, configurable: true });
+    await user.click(screen.getByRole("button", { name: "IBAN kopyala" }));
+    await user.click(screen.getByRole("button", { name: "Alıcı kopyala" }));
+    expect(yazilan).toEqual(["TR330006100519786457841326", "Anket360 Ltd."]);
+    expect(screen.getAllByText("Kopyalandı").length).toBeGreaterThan(0);
     await user.type(screen.getByPlaceholderText(/gönderen ad soyad/), "Ayşe Demir 28.10");
     await user.click(screen.getByRole("button", { name: "Ödemeyi yaptım" }));
     expect(await screen.findByRole("heading", { name: "Ödeme bildiriminiz alındı" })).toBeInTheDocument();
