@@ -23,6 +23,8 @@
 - [x] **Aşama 1** — Proje kurulumu, Türkçe ana sayfa, giriş/kayıt/şifre sıfırlama, kurum oluşturma, yönetim paneli, anket oluşturucu, testler (21 test)
 - [x] **Aşama 2** — Supabase veri katmanı, şema + RLS, e-posta doğrulama, şifre sıfırlama/değiştirme, ekip daveti ve üye çıkarma (50 birim/arayüz testi + 24 RLS kontrolü)
 - [x] **Otomasyon** — GitHub Actions: testler, Supabase migration + kimlik doğrulama ayarları, GitHub Pages yayını
-- [ ] **Aşama 2 doğrulama** — Pages açılması ve 3 Supabase secret'ı bekleniyor; ardından canlı sitede uçtan uca deneme
+- [x] **Canlıya alma** — Supabase projesi `ankettt` (eu-west-1) bağlandı, migration uygulandı, site https://eelitajans34-ai.github.io/anket360/ adresinde
+- [ ] **Canlı doğrulama** — kayıt → e-posta doğrulama → kurum → anket → davet akışının canlı sitede elle denenmesi
+- [ ] **Özel SMTP** — Supabase ücretsiz planı saatte birkaç e-posta gönderir ve Türkçe şablonlara izin vermez; SMTP tanımlanınca iş akışı Türkçe şablonları otomatik uygular
 - [ ] **Aşama 3** — Herkese açık anket yanıtlama sayfası (`/a/:id`), yanıt kaydı, QR/bağlantı paylaşımı, davet e-postası gönderimi
 - [ ] **Aşama 4** — Raporlar, grafikler, Excel/CSV dışa aktarma
