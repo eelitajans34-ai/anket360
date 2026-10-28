@@ -157,7 +157,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "$body")
           if [ "$code" -ge 300 ]; then
-            echo "::error::Kimlik doğrulama ayarları yapılamadı (HTTP $code)"; cat /tmp/yanit.json; exit 1
+            echo "::error title=Kimlik doğrulama ayarları yapılamadı (HTTP $code)::$(head -c 600 /tmp/yanit.json | tr '\n' ' ')"; exit 1
           fi
           echo "Site adresi: $SITE_URL"
 
