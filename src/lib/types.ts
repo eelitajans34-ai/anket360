@@ -80,6 +80,17 @@ export interface SurveyResponse {
   createdAt: string;
 }
 
+export interface Invitation {
+  id: ID;
+  orgId: ID;
+  email: string;
+  role: Exclude<OrgRole, "sahip">;
+  token: string;
+  invitedBy: ID;
+  createdAt: string;
+  acceptedAt?: string;
+}
+
 export interface SignUpInput {
   fullName: string;
   email: string;

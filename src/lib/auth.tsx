@@ -11,7 +11,8 @@ interface AuthState {
   activeOrg: OrgWithRole | null;
   setActiveOrg(id: string): void;
   signIn(email: string, password: string): Promise<User>;
-  signUp(input: SignUpInput): Promise<User>;
+  /** E-posta doğrulaması gerekiyorsa null döner. */
+  signUp(input: SignUpInput): Promise<User | null>;
   signOut(): Promise<void>;
   refresh(): Promise<void>;
 }
@@ -36,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
+    return db.onAuthChange?.(() => void refresh());
   }, [refresh]);
 
   const setActiveOrg = useCallback((id: string) => {

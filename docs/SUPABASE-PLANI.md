@@ -1,6 +1,6 @@
 # Supabase geçiş planı (Aşama 2)
 
-> **Durum: BAĞLANMADI.** Proje sahibi onay vermeden Supabase'e hiçbir bağlantı kurulmayacak, şema uygulanmayacak.
+> **Durum:** Proje sahibi onay verdi; kod tarafı tamamlandı (Aşama 2). Kurulum adımları için bkz. [SUPABASE-KURULUM.md](SUPABASE-KURULUM.md).
 
 Uygulama tüm veri işlemlerini `src/lib/data/store.ts` içindeki `DataStore` arayüzü üzerinden yapar.
 Şu an `LocalStore` (tarayıcı localStorage) kullanılıyor. Geçiş adımları:

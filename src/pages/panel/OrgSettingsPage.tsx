@@ -1,20 +1,18 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { UserPlus } from "lucide-react";
 import { PageHeader } from "./PanelLayout";
+import { TeamSection } from "./TeamSection";
 import { Alert, SelectField, TextField } from "@/components/ui/Field";
 import { useAuth } from "@/lib/auth";
-import { CITIES, ORG_SIZES, ROLE_LABEL, SECTORS } from "@/lib/constants";
+import { CITIES, ORG_SIZES, SECTORS } from "@/lib/constants";
 import { db } from "@/lib/data";
 import type { OrganizationInput } from "@/lib/types";
-import { useAsync } from "@/lib/use-async";
-import { formatDate, initials } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default function OrgSettingsPage() {
   const { activeOrg, refresh } = useAuth();
   const [form, setForm] = useState<OrganizationInput>({ name: "", sector: "", size: "", city: "", phone: "", website: "" });
   const [msg, setMsg] = useState<{ kind: "error" | "success"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
-  const { data: members = [] } = useAsync(() => (activeOrg ? db.listMembers(activeOrg.id) : Promise.resolve([])), [activeOrg?.id]);
   const canEdit = activeOrg?.role === "sahip" || activeOrg?.role === "yonetici";
 
   useEffect(() => {
@@ -65,25 +63,7 @@ export default function OrgSettingsPage() {
           {canEdit && <div className="flex justify-end border-t border-slate-100 pt-5"><button className="btn-primary" disabled={busy}>{busy ? "Kaydediliyor…" : "Değişiklikleri kaydet"}</button></div>}
         </form>
 
-        <section className="card p-6 lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold">Ekip ({members.length})</h2>
-            <button className="btn-secondary px-3 py-2 text-xs" disabled title="Veritabanı bağlantısından sonra etkinleşecek"><UserPlus className="h-4 w-4" />Davet et</button>
-          </div>
-          <ul className="mt-4 divide-y divide-slate-100">
-            {members.map((m) => (
-              <li key={m.userId} className="flex items-center gap-3 py-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold">{initials(m.user.fullName)}</span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{m.user.fullName}</p>
-                  <p className="truncate text-xs text-slate-500">{m.user.email}</p>
-                </div>
-                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{ROLE_LABEL[m.role]}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-4 rounded-lg bg-slate-50 p-3 text-xs text-slate-500">E-posta ile ekip daveti, veritabanı ve e-posta altyapısı bağlandıktan sonra (Aşama 2) etkinleşecek.</p>
-        </section>
+        <TeamSection />
       </div>
     </>
   );

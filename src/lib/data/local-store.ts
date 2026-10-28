@@ -1,5 +1,6 @@
 import type {
   ID,
+  Invitation,
   Membership,
   Organization,
   OrganizationInput,
@@ -28,6 +29,7 @@ interface DB {
   users: StoredUser[];
   organizations: Organization[];
   memberships: Membership[];
+  invitations: Invitation[];
   surveys: Survey[];
   responses: SurveyResponse[];
 }
@@ -36,7 +38,7 @@ const DB_KEY = "anket360:db";
 const SESSION_KEY = "anket360:session";
 
 function emptyDB(): DB {
-  return { version: 1, users: [], organizations: [], memberships: [], surveys: [], responses: [] };
+  return { version: 1, users: [], organizations: [], memberships: [], invitations: [], surveys: [], responses: [] };
 }
 
 function now() {
@@ -63,7 +65,7 @@ export class LocalStore implements DataStore {
       const raw = this.storage.getItem(DB_KEY);
       if (!raw) return emptyDB();
       const parsed = JSON.parse(raw) as DB;
-      return parsed.version === 1 ? parsed : emptyDB();
+      return parsed.version === 1 ? { ...emptyDB(), ...parsed } : emptyDB();
     } catch {
       return emptyDB();
     }
@@ -134,6 +136,18 @@ export class LocalStore implements DataStore {
     if (!isValidEmail(email)) throw new DataError("validation", "Geçerli bir e-posta adresi girin.");
     // Yerel modda e-posta gönderilmez. Güvenlik gereği hesabın var olup
     // olmadığı bilgisi dışarı verilmez.
+  }
+
+  async updatePassword(newPassword: string): Promise<void> {
+    const issues = passwordIssues(newPassword);
+    if (issues.length) throw new DataError("validation", `Şifre: ${issues.join(", ").toLocaleLowerCase("tr-TR")}.`);
+    const id = this.storage.getItem(SESSION_KEY);
+    const db = this.read();
+    const user = db.users.find((u) => u.id === id);
+    if (!user) throw new DataError("unauthorized", "Şifre değiştirmek için oturum açın.");
+    user.salt = uid();
+    user.passwordHash = await hash(newPassword, user.salt);
+    this.write(db);
   }
 
   async updateProfile(userId: ID, patch: Partial<Pick<User, "fullName">>): Promise<User> {
@@ -213,6 +227,58 @@ export class LocalStore implements DataStore {
       });
   }
 
+  async removeMember(orgId: ID, userId: ID): Promise<void> {
+    this.mutate((db) => {
+      const m = db.memberships.find((x) => x.orgId === orgId && x.userId === userId);
+      if (!m) throw new DataError("not_found", "Üye bulunamadı.");
+      if (m.role === "sahip") throw new DataError("forbidden", "Kurum sahibi kurumdan çıkarılamaz.");
+      db.memberships = db.memberships.filter((x) => x !== m);
+    });
+  }
+
+  // ---------- Davetler ----------
+
+  async createInvitation(orgId: ID, invitedBy: ID, emailRaw: string, role: Invitation["role"]): Promise<Invitation> {
+    const email = emailRaw.trim().toLowerCase();
+    if (!isValidEmail(email)) throw new DataError("validation", "Geçerli bir e-posta adresi girin.");
+    return this.mutate((db) => {
+      const already = db.memberships.some((m) => m.orgId === orgId && db.users.find((u) => u.id === m.userId)?.email === email);
+      if (already) throw new DataError("validation", "Bu kişi zaten kurumun üyesi.");
+      if (db.invitations.some((i) => i.orgId === orgId && i.email === email && !i.acceptedAt)) {
+        throw new DataError("validation", "Bu e-posta adresine bekleyen bir davet zaten var.");
+      }
+      const inv: Invitation = { id: uid(), orgId, email, role, token: uid().replace(/-/g, ""), invitedBy, createdAt: now() };
+      db.invitations.push(inv);
+      return inv;
+    });
+  }
+
+  async listInvitations(orgId: ID): Promise<Invitation[]> {
+    return this.read().invitations.filter((i) => i.orgId === orgId && !i.acceptedAt);
+  }
+
+  async revokeInvitation(id: ID): Promise<void> {
+    this.mutate((db) => {
+      db.invitations = db.invitations.filter((i) => i.id !== id);
+    });
+  }
+
+  async acceptInvitation(token: string, userId: ID): Promise<ID> {
+    return this.mutate((db) => {
+      const inv = db.invitations.find((i) => i.token === token && !i.acceptedAt);
+      if (!inv) throw new DataError("not_found", "Davet bulunamadı veya daha önce kullanılmış.");
+      const user = db.users.find((u) => u.id === userId);
+      if (!user || user.email !== inv.email) {
+        throw new DataError("forbidden", `Bu davet ${inv.email} adresine gönderildi. O adresle giriş yapın.`);
+      }
+      if (!db.memberships.some((m) => m.orgId === inv.orgId && m.userId === userId)) {
+        db.memberships.push({ orgId: inv.orgId, userId, role: inv.role, createdAt: now() });
+      }
+      inv.acceptedAt = now();
+      return inv.orgId;
+    });
+  }
+
   // ---------- Anketler ----------
 
   async listSurveys(orgId: ID): Promise<Survey[]> {
@@ -278,7 +344,7 @@ export class LocalStore implements DataStore {
   }
 }
 
-function validateOrg(input: OrganizationInput) {
+export function validateOrg(input: OrganizationInput) {
   if (!input.name || input.name.trim().length < 2) throw new DataError("validation", "Kurum adı en az 2 karakter olmalı.");
   if (!input.sector) throw new DataError("validation", "Sektör seçin.");
   if (!input.size) throw new DataError("validation", "Çalışan sayısını seçin.");

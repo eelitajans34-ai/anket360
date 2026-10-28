@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { Building2, ChevronDown, ClipboardList, LayoutDashboard, LogOut, Menu, Plus, UserCircle, X } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth";
+import { backend } from "@/lib/data";
 import { ROLE_LABEL } from "@/lib/constants";
 import { cn, initials } from "@/lib/utils";
 
@@ -34,6 +35,11 @@ export default function PanelLayout() {
           <button className="btn-ghost -ml-2 px-2" onClick={() => setMobileOpen(true)} aria-label="Menüyü aç"><Menu className="h-6 w-6" /></button>
           <Logo />
         </header>
+        {backend === "local" && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800">
+            Demo modu: veriler yalnızca bu tarayıcıda saklanıyor.
+          </div>
+        )}
         <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:py-10">
           <Outlet />
         </main>

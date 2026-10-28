@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { MailCheck } from "lucide-react";
 import { AuthLayout } from "./AuthLayout";
 import { Alert, TextField } from "@/components/ui/Field";
 import { PasswordField, PasswordStrength } from "@/components/ui/PasswordField";
@@ -11,6 +12,9 @@ type Errors = Partial<Record<"fullName" | "email" | "password" | "confirm" | "kv
 export default function SignupPage() {
   const { signUp } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from;
+  const [confirmSentTo, setConfirmSentTo] = useState<string | null>(null);
   const [form, setForm] = useState({ fullName: "", email: "", password: "", confirm: "", kvkk: false });
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -37,8 +41,9 @@ export default function SignupPage() {
     if (Object.keys(e).length) return;
     setBusy(true);
     try {
-      await signUp({ fullName: form.fullName, email: form.email, password: form.password });
-      navigate("/kurum/olustur", { replace: true });
+      const user = await signUp({ fullName: form.fullName, email: form.email, password: form.password });
+      if (!user) setConfirmSentTo(form.email.trim().toLowerCase());
+      else navigate(from ?? "/kurum/olustur", { replace: true });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Kayıt oluşturulamadı.");
     } finally {
@@ -46,11 +51,25 @@ export default function SignupPage() {
     }
   }
 
+  if (confirmSentTo) {
+    return (
+      <AuthLayout title="E-postanızı doğrulayın" footer={<Link to="/giris" className="font-semibold text-brand-600 hover:underline">Giriş sayfasına git</Link>}>
+        <div className="card p-6 text-center">
+          <MailCheck className="mx-auto h-12 w-12 text-brand-600" />
+          <p className="mt-4 text-sm text-slate-700">
+            <strong>{confirmSentTo}</strong> adresine bir doğrulama bağlantısı gönderdik. Bağlantıya tıkladıktan sonra hesabınız etkinleşecek.
+          </p>
+          <p className="mt-3 text-xs text-slate-500">E-posta birkaç dakika içinde gelmezse istenmeyen (spam) klasörünü kontrol edin.</p>
+        </div>
+      </AuthLayout>
+    );
+  }
+
   return (
     <AuthLayout
       title="Ücretsiz hesap oluşturun"
       subtitle="Kredi kartı gerekmez. Kurulum 2 dakika sürer."
-      footer={<>Zaten hesabınız var mı? <Link to="/giris" className="font-semibold text-brand-600 hover:underline">Giriş yapın</Link></>}
+      footer={<>Zaten hesabınız var mı? <Link to="/giris" state={location.state} className="font-semibold text-brand-600 hover:underline">Giriş yapın</Link></>}
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {formError && <Alert>{formError}</Alert>}

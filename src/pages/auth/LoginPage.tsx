@@ -36,7 +36,7 @@ export default function LoginPage() {
     <AuthLayout
       title="Tekrar hoş geldiniz"
       subtitle="Hesabınıza giriş yaparak anketlerinizi yönetin."
-      footer={<>Hesabınız yok mu? <Link to="/kayit" className="font-semibold text-brand-600 hover:underline">Ücretsiz kaydolun</Link></>}
+      footer={<>Hesabınız yok mu? <Link to="/kayit" state={location.state} className="font-semibold text-brand-600 hover:underline">Ücretsiz kaydolun</Link></>}
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
         {error && <Alert>{error}</Alert>}

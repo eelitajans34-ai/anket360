@@ -28,7 +28,8 @@ export function RequireOrg() {
 /** Giriş yapmış kullanıcıyı panele yönlendirir (giriş/kayıt sayfaları için). */
 export function GuestOnly() {
   const { loading, user } = useAuth();
+  const location = useLocation();
   if (loading) return <FullPageSpinner />;
-  if (user) return <Navigate to="/panel" replace />;
+  if (user) return <Navigate to={(location.state as { from?: string } | null)?.from ?? "/panel"} replace />;
   return <Outlet />;
 }

@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { Alert } from "@/components/ui/Field";
 import { ArrowRight, CheckCircle2, ClipboardList, FileEdit, MessageSquare, Plus, Radio } from "lucide-react";
 import { PageHeader } from "./PanelLayout";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -9,6 +10,7 @@ import { formatDate } from "@/lib/utils";
 
 export default function DashboardPage() {
   const { user, activeOrg } = useAuth();
+  const passwordChanged = (useLocation().state as { passwordChanged?: boolean } | null)?.passwordChanged;
   const { data, loading } = useAsync(async () => {
     if (!activeOrg) return null;
     const [surveys, members] = await Promise.all([db.listSurveys(activeOrg.id), db.listMembers(activeOrg.id)]);
@@ -40,6 +42,8 @@ export default function DashboardPage() {
         description={`${activeOrg?.name} kurumunun genel görünümü`}
         actions={<Link to="/panel/anketler/yeni" className="btn-primary"><Plus className="h-4 w-4" />Yeni anket</Link>}
       />
+
+      {passwordChanged && <div className="mb-6"><Alert kind="success">Şifreniz güncellendi.</Alert></div>}
 
       <section className="grid grid-cols-2 gap-4 lg:grid-cols-4" aria-label="Özet">
         {stats.map(({ label, value, icon: Icon, tone }) => (
